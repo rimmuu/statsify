@@ -31,7 +31,7 @@ export default function Overview() {
         <div className="mt-2 text-4xl font-semibold md:text-5xl">{dur(d.ms)}</div>
         <div className="mt-1 text-neutral-400">{hm(d.ms)} · {Math.floor(d.ms / 6e4).toLocaleString()} minutes</div>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat l="Play events" v={recs.length.toLocaleString()} s={`${d.streams.toLocaleString()} streams (30 s+)`} />
         <Stat l="Unique tracks" v={d.tr.length.toLocaleString()} />
         <Stat l="Unique artists" v={d.ar.length.toLocaleString()} />

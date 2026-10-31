@@ -1,8 +1,9 @@
 'use client'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useData } from '@/lib/store'
 import { importFiles, type Result } from '@/lib/import'
 import { clearAll } from '@/lib/db'
+import { clearPhotoCache, photosEnabled, setPhotosEnabled } from '@/lib/artistPhoto'
 
 export default function Settings() {
   const { all, reload } = useData()
@@ -10,6 +11,8 @@ export default function Settings() {
   const [msg, setMsg] = useState('')
   const [res, setRes] = useState<Result | null>(null)
   const [busy, setBusy] = useState(false)
+  const [photos, setPhotos] = useState(true)
+  useEffect(() => { setPhotos(photosEnabled()) }, [])
 
   const run = async (fs: File[]) => {
     if (!fs.length) return
@@ -26,6 +29,7 @@ export default function Settings() {
   const wipe = async () => {
     if (confirm('Delete all imported data from this browser?')) {
       await clearAll()
+      clearPhotoCache()
       await reload()
       setRes(null)
       setMsg('')
@@ -62,6 +66,13 @@ export default function Settings() {
           {res.dupes.toLocaleString()} duplicates skipped · {res.skipped.toLocaleString()} rows skipped (podcasts, audiobooks or missing data) · {res.read.toLocaleString()} rows read.{res.bad > 0 && ` ${res.bad} file(s) weren’t valid listening-history JSON and were ignored.`}
         </div>
       )}
+      <label className="card flex cursor-pointer items-center justify-between gap-4">
+        <span>
+          <span className="block font-medium">Artist photos</span>
+          <span className="text-sm text-neutral-400">Looks up artist names on Wikipedia (free, no account) and keeps the results in this browser. Turn off to stop all lookups.</span>
+        </span>
+        <input type="checkbox" checked={photos} onChange={(e) => { setPhotosEnabled(e.target.checked); setPhotos(e.target.checked) }} className="h-5 w-5 shrink-0 accent-[#1DB954]" />
+      </label>
       <div className="card flex items-center justify-between">
         <span>{all.length.toLocaleString()} plays stored in this browser</span>
         <button onClick={wipe} className="rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 hover:bg-red-500/20">Clear all</button>

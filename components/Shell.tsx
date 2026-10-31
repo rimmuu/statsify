@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
 import { Provider, useData } from '@/lib/store'
 import { PERIODS } from '@/lib/stats'
 
-const NAV = [['/', 'Overview'], ['/tracks', 'Tracks'], ['/artists', 'Artists'], ['/albums', 'Albums'], ['/genres', 'Genres'], ['/history', 'History'], ['/insights', 'Insights'], ['/compare', 'Compare'], ['/settings', 'Settings']]
+const NAV = [['/', 'Overview'], ['/tracks', 'Tracks'], ['/artists', 'Artists'], ['/albums', 'Albums'], ['/genres', 'Genres'], ['/history', 'History'], ['/insights', 'Insights'], ['/compare', 'Compare'], ['/share', 'Share'], ['/settings', 'Settings']]
 
 function Brand() {
   return (
@@ -33,14 +33,16 @@ function Inner({ children }: { children: ReactNode }) {
         <header className="sticky top-0 z-10 border-b border-white/5 bg-black/80 backdrop-blur">
           <div className="px-4 pt-3 md:hidden"><Brand /></div>
           <nav className="flex gap-1 overflow-x-auto p-2 md:hidden">{links}</nav>
+          {path !== '/share' && (
           <div className="flex gap-2 overflow-x-auto p-2 md:px-8">
             {PERIODS.map((p) => (
-              <button key={p.k} onClick={() => setPeriod(p.k)} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition ${period === p.k ? 'bg-spotify text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>{p.l}</button>
+              <button key={p.k} onClick={() => setPeriod(p.k)} className={`press whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition ${period === p.k ? 'bg-spotify text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>{p.l}</button>
             ))}
           </div>
+          )}
         </header>
         <main className="flex-1 p-4 md:p-8">
-          {show ? children : ready ? (
+          {show ? <div key={path} className="page-in">{children}</div> : ready ? (
             <div className="mx-auto mt-16 max-w-md text-center">
               <h1 className="text-2xl font-semibold">No listening history yet</h1>
               <p className="mt-2 text-neutral-400">Import your Spotify Extended Streaming History to see your stats. Everything stays in your browser.</p>

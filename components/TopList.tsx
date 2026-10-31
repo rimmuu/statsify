@@ -6,7 +6,7 @@ import type { ReactNode } from 'react'
 import { enc, group, hm, type Kind } from '@/lib/stats'
 import Art from './Art'
 
-const cls = 'card flex items-center gap-3 !p-3'
+const cls = 'card lift flex items-center gap-3 !p-3'
 function Item({ to, children }: { to?: string; children: ReactNode }) {
   return to ? <Link href={to} className={cls}>{children}</Link> : <div className={cls}>{children}</div>
 }
@@ -36,12 +36,12 @@ export default function TopList({ kind }: { kind: Kind }) {
         </div>
       </div>
       <p className="mb-4 text-sm text-neutral-500">Plays = every play event. Streams = plays of 30 s or more. Time is summed from actual ms_played.</p>
-      <ul className="space-y-2">
+      <ul className="stagger space-y-2">
         {rows.slice(0, n || undefined).map((r, i) => (
           <li key={r.key}>
           <Item to={kind === 'album' ? undefined : `/${kind}s/${enc(r.key)}`}>
             <span className="w-8 shrink-0 text-center text-sm tabular-nums text-neutral-500">{i + 1}</span>
-            <Art u={kind === 'artist' || i >= 60 ? '' : r.uri} name={r.name} />
+            <Art u={i >= 60 ? '' : kind === 'artist' ? `artist:${r.name}` : r.uri} name={r.name} />
             <div className="min-w-0 flex-1">
               <div className="truncate font-medium">{r.name}</div>
               <div className="truncate text-sm text-neutral-500">{r.sub ? (kind === 'album' ? `${r.sub} · ${r.tracks} tracks` : r.sub) : `${r.tracks} tracks`}</div>

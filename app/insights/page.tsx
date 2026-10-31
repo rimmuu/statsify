@@ -29,7 +29,7 @@ export default function Insights() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <h1 className="text-2xl font-semibold">Insights</h1>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <div className="stagger grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat l="Most active hour" v={`${d.ph.k}:00`} s="your local time" />
         <Stat l="Most active day" v={String(d.pw.k)} />
         <Stat l="Longest streak" v={`${d.best} days`} s="consecutive days with plays" />

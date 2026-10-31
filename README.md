@@ -21,8 +21,11 @@ Open **Settings** and select all the JSON files at once. Re-importing is safe: d
 - **Play event** = any imported row. **Stream** = 30 s or more played (Spotify's threshold). Both are shown.
 - Podcast/audiobook rows are skipped. Re-imports are skipped by timestamp + track + `ms_played` + occurrence number, so genuinely identical events within one export are all kept.
 - Time filters end at your newest imported play, because exports are snapshots.
-- Artwork is not in the export. Tracks and albums fetch it from Spotify's keyless oEmbed endpoint and fall back to a letter tile; artists always use a letter tile.
+- Artwork is not in the export. Tracks and albums fetch it from Spotify's keyless oEmbed endpoint. Artist photos come from Wikipedia's free API and are shown only when the page title equals the artist name and its description is music-related; otherwise (and on any failure) a letter tile is used. Lookups are cached in the browser and can be turned off in Settings.
 - Genres are not in the export, so the Genres page says so instead of guessing.
 
 ## Not built yet
-Genre enrichment (e.g. MusicBrainz tags cached in IndexedDB) and artist photos. This code has not been through `npm run build` or browser testing yet.
+Genre enrichment (e.g. MusicBrainz tags cached in IndexedDB).
+
+## Share card
+The **Share** page draws a PNG card (Story 9:16 or Post 1:1; Dark, Purple, Neon, Minimal) from your own history: total time, plays, top artist, top album and top 5 tracks, ranked by listening time. Periods: week, month, year, all time, or a custom date range; presets end at your newest imported play. Download works everywhere; Share uses the Web Share API when the browser can share files and otherwise saves the PNG. Artwork is drawn only if the image host allows it; otherwise letter tiles are used.

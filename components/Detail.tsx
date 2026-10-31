@@ -38,13 +38,13 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
     <div className="mx-auto max-w-4xl space-y-6">
       <Link href={`/${kind}s`} className="text-sm text-neutral-400 hover:text-white">← Top {kind}s</Link>
       <div className="flex items-center gap-4">
-        <Art big u={kind === 'track' ? h.u : ''} name={kind === 'track' ? h.t : h.a} />
+        <Art big u={kind === 'track' ? h.u : `artist:${h.a}`} name={kind === 'track' ? h.t : h.a} />
         <div className="min-w-0">
           <h1 className="truncate text-2xl font-semibold">{kind === 'track' ? h.t : h.a}</h1>
           {kind === 'track' && <p className="truncate text-neutral-400">{h.a}{h.al ? ` · ${h.al}` : ''}</p>}
         </div>
       </div>
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+      <div className="stagger grid grid-cols-2 gap-3 md:grid-cols-3">
         <Stat l="Play events" v={d.mine.length.toLocaleString()} />
         <Stat l="Streams (30 s+)" v={d.streams.toLocaleString()} />
         <Stat l="Listening time" v={hm(d.ms)} s={dur(d.ms)} />
