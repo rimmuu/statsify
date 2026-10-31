@@ -31,19 +31,19 @@ export function parseRows(rows: any[], have: Set<string>, seen: Map<string, numb
   return batch
 }
 
-export async function importFiles(files: File[], onProgress: (p: number, msg: string) => void): Promise<Result> {
+export async function importFiles(files: File[], onProgress: (p: number, name: string, i: number, n: number) => void): Promise<Result> {
   const have = await keys()
   const seen = new Map<string, number>()
   const out = newResult()
   for (let i = 0; i < files.length; i++) {
     const f = files[i]
-    onProgress(i / files.length, `Reading ${f.name} (${i + 1}/${files.length})`)
+    onProgress(i / files.length, f.name, i + 1, files.length)
     let rows: unknown
     try { rows = JSON.parse(await f.text()) } catch { out.bad++; continue }
     if (!Array.isArray(rows)) { out.bad++; continue }
     out.files++
     await putMany(parseRows(rows, have, seen, out))
   }
-  onProgress(1, 'Done')
+  onProgress(1, '', files.length, files.length)
   return out
 }

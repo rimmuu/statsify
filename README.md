@@ -29,3 +29,6 @@ Genre enrichment (e.g. MusicBrainz tags cached in IndexedDB).
 
 ## Share card
 The **Share** page draws a PNG card (Story 9:16 or Post 1:1; Dark, Purple, Neon, Minimal) from your own history: total time, plays, top artist, top album and top 5 tracks, ranked by listening time. Periods: week, month, year, all time, or a custom date range; presets end at your newest imported play. Download works everywhere; Share uses the Web Share API when the browser can share files and otherwise saves the PNG. Artwork is drawn only if the image host allows it; otherwise letter tiles are used.
+
+## Language and motion
+**Settings > Language** switches the whole interface between English and Bahasa Indonesia. The choice is saved in this browser (localStorage); numbers, dates and durations follow the language. Artist, track and album names and your imported data are never translated. All text lives in one table in `lib/i18n.tsx`, English and Indonesian side by side. Animations are CSS transitions (plus a small count-up) and are turned off when the system asks for reduced motion.

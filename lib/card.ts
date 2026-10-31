@@ -1,20 +1,18 @@
 // Draws the shareable stats card straight onto a <canvas> (no extra dependency). The preview IS this canvas,
 // so the exported PNG is pixel-identical to what the user sees. Only real data passed in via `Spec` is drawn.
-import { hm } from './stats'
 
 export type Theme = 'dark' | 'purple' | 'neon' | 'minimal'
 export type Fmt = 'story' | 'square'
 export type Img = HTMLImageElement | null
 export type Item = { name: string; sub: string; ms: number; plays: number; img: Img }
-export type Spec = { theme: Theme; fmt: Fmt; label: string; range: string; ms: number; plays: number; artist?: Item; album?: Item; tracks: Item[] }
+export type Labels = { total: string; artist: string; album: string; tracks: string; time: (ms: number) => string; plays: (n: number) => string; tiny: string }
+export type Spec = { theme: Theme; fmt: Fmt; label: string; range: string; ms: number; plays: number; artist?: Item; album?: Item; tracks: Item[]; tx: Labels }
 
 type Ctx = CanvasRenderingContext2D
 type Pal = { ink: string; dim: string; accent: string; panel: string; line: string; glow: boolean; bg: (c: Ctx, w: number, h: number) => void }
 
 const W = 1080
 const LAY = { story: { h: 1920, pad: 84 }, square: { h: 1080, pad: 64 } }
-const pl = (n: number) => `${n.toLocaleString()} ${n === 1 ? 'play' : 'plays'}`
-const tm = (ms: number) => (ms < 6e4 ? '<1 min' : hm(ms))
 const FONT = 'ui-sans-serif, system-ui, -apple-system, "SF Pro Text", Inter, "Segoe UI", sans-serif'
 
 function halo(c: Ctx, x: number, y: number, r: number, rgb: string, a: number) {
@@ -111,7 +109,7 @@ function pic(c: Ctx, p: Pal, img: Img, x: number, y: number, s: number, r: numbe
   c.restore()
 }
 
-function block(c: Ctx, p: Pal, x: number, y: number, w: number, h: number, label: string, it: Item, circle: boolean, ns: number, ss: number, a = h - 40) {
+function block(c: Ctx, p: Pal, lb: Labels, x: number, y: number, w: number, h: number, label: string, it: Item, circle: boolean, ns: number, ss: number, a = h - 40) {
   rr(c, x, y, w, h, 28)
   c.fillStyle = p.panel
   c.fill()
@@ -124,7 +122,7 @@ function block(c: Ctx, p: Pal, x: number, y: number, w: number, h: number, label
   pic(c, p, it.img, x + 20, y + (h - a) / 2, a, 18, it.name, circle)
   txt(c, label, tx, y + h * 0.28, { size: 20, weight: 700, color: p.dim, spacing: '3px' })
   txt(c, it.name, tx, y + h * 0.28 + ns + 8, { size: ns, weight: 800, color: p.ink, max: tw })
-  txt(c, `${tm(it.ms)} · ${pl(it.plays)}`, tx, y + h * 0.28 + ns + ss + 20, { size: ss, color: p.dim, max: tw })
+  txt(c, `${it.ms < 6e4 ? lb.tiny : lb.time(it.ms)} · ${lb.plays(it.plays)}`, tx, y + h * 0.28 + ns + ss + 20, { size: ss, color: p.dim, max: tw })
 }
 
 export function drawCard(cv: HTMLCanvasElement, s: Spec) {
@@ -142,37 +140,37 @@ export function drawCard(cv: HTMLCanvasElement, s: Spec) {
   txt(c, s.range, x0, y + (story ? 84 : 76), { size: 26, color: p.dim, max: inner })
   y += story ? 170 : 134
 
-  txt(c, 'TOTAL LISTENING TIME', x0, y, { size: 24, weight: 700, color: p.dim, spacing: '3px' })
+  txt(c, s.tx.total, x0, y, { size: 24, weight: 700, color: p.dim, spacing: '3px' })
   y += story ? 150 : 100
-  txt(c, hm(s.ms), x0, y, { size: story ? 140 : 96, weight: 800, color: p.ink, max: inner, shrink: true, glow })
+  txt(c, s.tx.time(s.ms), x0, y, { size: story ? 140 : 96, weight: 800, color: p.ink, max: inner, shrink: true, glow })
   y += story ? 66 : 46
-  txt(c, pl(s.plays), x0, y, { size: story ? 42 : 30, weight: 600, color: p.accent })
+  txt(c, s.tx.plays(s.plays), x0, y, { size: story ? 42 : 30, weight: 600, color: p.accent })
   y += story ? 70 : 40
 
   if (story) {
-    if (s.artist) { block(c, p, x0, y, inner, 210, 'TOP ARTIST', s.artist, true, 54, 30); y += 238 }
-    if (s.album) { block(c, p, x0, y, inner, 160, 'TOP ALBUM', s.album, false, 40, 26); y += 188 }
+    if (s.artist) { block(c, p, s.tx, x0, y, inner, 210, s.tx.artist, s.artist, true, 54, 30); y += 238 }
+    if (s.album) { block(c, p, s.tx, x0, y, inner, 160, s.tx.album, s.album, false, 40, 26); y += 188 }
   } else {
     const two = !!(s.artist && s.album), w2 = two ? (inner - 20) / 2 : inner
-    if (s.artist) block(c, p, x0, y, w2, 132, 'TOP ARTIST', s.artist, true, 30, 20, 76)
-    if (s.album) block(c, p, s.artist ? x0 + w2 + 20 : x0, y, w2, 132, 'TOP ALBUM', s.album, false, 30, 20, 76)
+    if (s.artist) block(c, p, s.tx, x0, y, w2, 132, s.tx.artist, s.artist, true, 30, 20, 76)
+    if (s.album) block(c, p, s.tx, s.artist ? x0 + w2 + 20 : x0, y, w2, 132, s.tx.album, s.album, false, 30, 20, 76)
     if (s.artist || s.album) y += 158
   }
 
-  txt(c, 'TOP TRACKS', x0, y + 24, { size: 24, weight: 700, color: p.dim, spacing: '3px' })
+  txt(c, s.tx.tracks, x0, y + 24, { size: 24, weight: 700, color: p.dim, spacing: '3px' })
   y += 48
   const rh = Math.min(story ? 150 : 84, (L.h - L.pad - 60 - y) / Math.max(1, s.tracks.length))
   s.tracks.forEach((t, i) => {
     const ry = y + i * rh, a = rh - 20
     txt(c, String(i + 1), x0 + 26, ry + rh * 0.6, { size: story ? 38 : 28, weight: 800, color: p.accent, align: 'center', glow })
     pic(c, p, t.img, x0 + 64, ry + 10, a, 14, t.name, false)
-    const tx = x0 + 64 + a + 22, rs = story ? 28 : 21, right = tm(t.ms)
+    const tx = x0 + 64 + a + 22, rs = story ? 28 : 21, right = t.ms < 6e4 ? s.tx.tiny : s.tx.time(t.ms)
     c.font = `600 ${rs}px ${FONT}`
     ;(c as unknown as { letterSpacing: string }).letterSpacing = '0px'
     const rw = c.measureText(right).width, tw = W - x0 - rw - 24 - tx
     txt(c, right, W - x0, ry + rh * 0.58, { size: rs, weight: 600, color: p.dim, align: 'right' })
     txt(c, t.name, tx, ry + rh * (story ? 0.42 : 0.4), { size: story ? 36 : 26, weight: 700, color: p.ink, max: tw })
-    txt(c, `${t.sub} · ${pl(t.plays)}`, tx, ry + rh * (story ? 0.74 : 0.8), { size: story ? 26 : 20, color: p.dim, max: tw })
+    txt(c, `${t.sub} · ${s.tx.plays(t.plays)}`, tx, ry + rh * (story ? 0.74 : 0.8), { size: story ? 26 : 20, color: p.dim, max: tw })
     if (i < s.tracks.length - 1) { c.fillStyle = p.line; c.fillRect(x0 + 64, ry + rh - 1, inner - 64, 2) }
   })
 

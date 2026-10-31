@@ -1,11 +1,15 @@
+'use client'
+import { useI18n } from '@/lib/i18n'
+
 export default function Genres() {
+  const { t } = useI18n()
   return (
     <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-semibold">Genres</h1>
+      <h1 className="text-2xl font-semibold">{t('g.title')}</h1>
       <div className="card mt-6 space-y-3 text-neutral-300">
-        <p className="font-medium text-white">Genre data isn’t available.</p>
-        <p>Spotify’s Extended Streaming History has no genre field, and artist genres are only served through Spotify’s authenticated API. Statsify won’t guess or invent genres, so this page stays empty until a genre source is connected.</p>
-        <p className="text-sm text-neutral-500">A free option would be MusicBrainz artist tags, cached in IndexedDB.</p>
+        <p className="font-medium text-white">{t('g.head')}</p>
+        <p>{t('g.body')}</p>
+        <p className="text-sm text-neutral-500">{t('g.foot')}</p>
       </div>
     </div>
   )

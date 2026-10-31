@@ -35,3 +35,32 @@ body {
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { animation-duration: .01ms !important; animation-delay: 0ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Apple Music-style polish: ambient light, artwork reveal, active nav, menus, toasts. Transform/opacity only. */
+html { -webkit-tap-highlight-color: transparent; }
+a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible, [role='combobox']:focus-visible { outline: 2px solid #1DB954; outline-offset: 2px; }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.ambient { position: fixed; inset: 0; z-index: -1; pointer-events: none; background: radial-gradient(60% 45% at 88% -8%, rgba(29, 185, 84, .10), transparent 70%), radial-gradient(50% 40% at -8% 100%, rgba(139, 92, 246, .07), transparent 70%); }
+@property --ar { syntax: '<number>'; inherits: true; initial-value: 29; }
+@property --ag { syntax: '<number>'; inherits: true; initial-value: 185; }
+@property --ab { syntax: '<number>'; inherits: true; initial-value: 84; }
+.amb { position: relative; isolation: isolate; transition: --ar .9s ease, --ag .9s ease, --ab .9s ease; }
+.amb::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; pointer-events: none; background: radial-gradient(120% 140% at 0% 0%, rgb(var(--ar) var(--ag) var(--ab) / .34), transparent 62%), radial-gradient(90% 120% at 100% 100%, rgb(var(--ar) var(--ag) var(--ab) / .14), transparent 60%); }
+.art { opacity: 0; transform: scale(.92); transition: opacity .5s ease, transform .6s cubic-bezier(.22, 1, .36, 1); }
+.art.art-in { opacity: 1; transform: none; }
+.art-img { transition: opacity .5s ease, transform .6s cubic-bezier(.22, 1, .36, 1); }
+@media (hover: hover) { .art:hover .art-img, .lift:hover .art-img { transform: scale(1.07); } }
+.nav-link { position: relative; transition: color .2s ease, background-color .25s ease, box-shadow .3s ease; }
+.nav-link::before { content: ''; position: absolute; left: 3px; top: 24%; bottom: 24%; width: 3px; border-radius: 3px; background: #1DB954; transform: scaleY(0); transition: transform .3s cubic-bezier(.22, 1, .36, 1); }
+.nav-on { color: #fff; background: rgba(255, 255, 255, .08); box-shadow: 0 0 0 1px rgba(29, 185, 84, .28), 0 0 22px -8px rgba(29, 185, 84, .55); }
+.nav-on::before { transform: scaleY(1); }
+.glow-on { box-shadow: 0 0 0 1px rgba(29, 185, 84, .4), 0 0 20px -6px rgba(29, 185, 84, .55); }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-4px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes menu-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-4px) scale(.97); } }
+.menu-in { transform-origin: top right; animation: menu-in .16s cubic-bezier(.22, 1, .36, 1) both; }
+.menu-out { transform-origin: top right; animation: menu-out .13s ease-in both; }
+@keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes toast-out { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(8px); } }
+.toast-in { animation: toast-in .28s cubic-bezier(.22, 1, .36, 1) both; }
+.toast-out { animation: toast-out .28s ease-in both; }
