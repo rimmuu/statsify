@@ -1,88 +1,61 @@
-'use client';
+'use client'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
+import type { ReactNode } from 'react'
+import { Provider, useData } from '@/lib/store'
+import { PERIODS } from '@/lib/stats'
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+const NAV = [['/', 'Overview'], ['/tracks', 'Tracks'], ['/artists', 'Artists'], ['/albums', 'Albums'], ['/genres', 'Genres'], ['/history', 'History'], ['/insights', 'Insights'], ['/compare', 'Compare'], ['/settings', 'Settings']]
 
-const NAV_ITEMS = [
-  { href: '/', label: 'Overview' },
-  { href: '/tracks', label: 'Tracks' },
-  { href: '/artists', label: 'Artists' },
-  { href: '/albums', label: 'Albums' },
-  { href: '/genres', label: 'Genres' },
-  { href: '/history', label: 'History' },
-  { href: '/insights', label: 'Insights' },
-  { href: '/compare', label: 'Compare' },
-  { href: '/settings', label: 'Settings' },
-];
-
-export default function Shell({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
-
+function Brand() {
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-950 text-zinc-100 font-sans antialiased">
-      {/* Mobile Sticky Header */}
-      <header className="md:hidden sticky top-0 z-50 bg-zinc-900/95 backdrop-blur border-b border-zinc-800">
-        {/* Slim top branding row */}
-        <div className="px-4 py-2 border-b border-zinc-800/60 text-xs font-semibold text-emerald-400 flex items-center gap-1.5">
-          <span className="text-emerald-500">●</span> Statsify by Rimmuu
-        </div>
-        {/* Navigation scrollable row */}
-        <nav className="flex items-center gap-1 overflow-x-auto px-3 py-2 text-xs no-scrollbar">
-          {NAV_ITEMS.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`px-3 py-1.5 rounded-md whitespace-nowrap transition-colors font-medium ${
-                  isActive
-                    ? 'bg-emerald-500/10 text-emerald-400 font-semibold'
-                    : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-      </header>
+    <div className="flex items-baseline gap-1.5 whitespace-nowrap">
+      <span className="text-lg font-semibold text-spotify">● Statsify</span>
+      <span className="text-xs text-neutral-500">by <span className="text-neutral-300">Rimmuu</span></span>
+    </div>
+  )
+}
 
-      <div className="flex-1 flex flex-col md:flex-row max-w-7xl w-full mx-auto">
-        {/* Desktop Sidebar */}
-        <aside className="hidden md:flex flex-col w-64 border-r border-zinc-800 p-6 shrink-0 sticky top-0 h-screen">
-          <div className="text-sm font-semibold text-emerald-400 mb-8 flex items-center gap-2">
-            <span className="text-emerald-500">●</span> Statsify by Rimmuu
+function Inner({ children }: { children: ReactNode }) {
+  const path = usePathname()
+  const { ready, all, period, setPeriod } = useData()
+  const links = NAV.map(([h, l]) => (
+    <Link key={h} href={h} className={`whitespace-nowrap rounded-lg px-3 py-2 text-sm transition ${path === h ? 'bg-white/10 text-white' : 'text-neutral-400 hover:text-white'}`}>{l}</Link>
+  ))
+  const show = path === '/settings' || (ready && all.length > 0)
+  return (
+    <div className="flex min-h-screen">
+      <aside className="hidden w-56 shrink-0 border-r border-white/5 p-4 md:block">
+        <div className="mb-6 px-3"><Brand /></div>
+        <nav className="flex flex-col gap-1">{links}</nav>
+      </aside>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="sticky top-0 z-10 border-b border-white/5 bg-black/80 backdrop-blur">
+          <div className="px-4 pt-3 md:hidden"><Brand /></div>
+          <nav className="flex gap-1 overflow-x-auto p-2 md:hidden">{links}</nav>
+          <div className="flex gap-2 overflow-x-auto p-2 md:px-8">
+            {PERIODS.map((p) => (
+              <button key={p.k} onClick={() => setPeriod(p.k)} className={`whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition ${period === p.k ? 'bg-spotify text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>{p.l}</button>
+            ))}
           </div>
-          <nav className="flex flex-col gap-1 flex-1">
-            {NAV_ITEMS.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`px-3 py-2 rounded-lg text-sm transition-colors font-medium flex items-center ${
-                    isActive
-                      ? 'bg-emerald-500/10 text-emerald-400 font-semibold'
-                      : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/50'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-        </aside>
-
-        {/* Main Content Area */}
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto flex flex-col min-w-0">
-          <div className="flex-1">{children}</div>
-
-          {/* Footer Credit */}
-          <footer className="mt-12 pt-6 border-t border-zinc-800/60 text-xs text-zinc-500 text-center md:text-left">
-            ©️ Statsify by Rimmuu
-          </footer>
+        </header>
+        <main className="flex-1 p-4 md:p-8">
+          {show ? children : ready ? (
+            <div className="mx-auto mt-16 max-w-md text-center">
+              <h1 className="text-2xl font-semibold">No listening history yet</h1>
+              <p className="mt-2 text-neutral-400">Import your Spotify Extended Streaming History to see your stats. Everything stays in your browser.</p>
+              <Link href="/settings" className="mt-6 inline-block rounded-full bg-spotify px-5 py-2.5 font-medium text-black">Import data</Link>
+            </div>
+          ) : <p className="text-neutral-500">Loading…</p>}
         </main>
+        <footer className="border-t border-white/5 px-4 py-6 text-center text-xs text-neutral-500 md:px-8 md:text-left">
+          Designed &amp; built by <span className="text-neutral-300">Rimmuu</span> © 2026
+        </footer>
       </div>
     </div>
-  );
+  )
+}
+
+export default function Shell({ children }: { children: ReactNode }) {
+  return <Provider><Inner>{children}</Inner></Provider>
 }
