@@ -70,3 +70,20 @@ export function dec(s: string): string {
     return ''
   }
 }
+
+// Time-of-day / weekday / streak figures, shared by Insights and Wrapped so both always agree.
+export function activity(rs: Rec[]) {
+  const hours = new Array<number>(24).fill(0)
+  const weekdays = new Array<number>(7).fill(0)
+  const days = new Set<number>()
+  for (const r of rs) {
+    const t = new Date(r.ts)
+    hours[t.getHours()] += r.ms
+    weekdays[t.getDay()] += r.ms
+    days.add(Math.floor((r.ts - t.getTimezoneOffset() * 6e4) / 864e5))
+  }
+  const s = [...days].sort((a, b) => a - b)
+  let best = 0, run = 0
+  s.forEach((x, i) => { run = i && x === s[i - 1] + 1 ? run + 1 : 1; best = Math.max(best, run) })
+  return { hours, weekdays, best, active: s.length }
+}

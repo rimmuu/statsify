@@ -73,8 +73,8 @@ export const ambient = (rgb: string): CSSProperties | undefined => {
 const hue = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h }
 
 // Rounded artwork: scales in when it enters the viewport, crossfades from the initial tile once the image has loaded,
-// and zooms gently on hover (hover-capable devices only; see globals.css).
-export default function Art({ u, name, big, fill }: { u: string; name: string; big?: boolean; fill?: boolean }) {
+// and zooms gently on hover (hover-capable devices only; see globals.css). `cls` swaps in custom size/rounding classes.
+export default function Art({ u, name, big, fill, cls, letter }: { u: string; name: string; big?: boolean; fill?: boolean; cls?: string; letter?: string }) {
   const src = useArtSrc(u)
   const [ok, setOk] = useState(false)
   const [bad, setBad] = useState(false)
@@ -90,12 +90,13 @@ export default function Art({ u, name, big, fill }: { u: string; name: string; b
   }, [])
   const artist = u.startsWith('artist:')
   const h = hue(name)
-  const size = fill ? 'aspect-square w-full' : big ? 'h-24 w-24 sm:h-32 sm:w-32' : 'h-12 w-12'
+  const size = cls ?? (fill ? 'aspect-square w-full' : big ? 'h-24 w-24 sm:h-32 sm:w-32' : 'h-12 w-12')
+  const round = artist ? 'rounded-full' : cls ? '' : fill || big ? 'rounded-2xl' : 'rounded-xl'
   return (
     <div ref={ref} style={{ background: `linear-gradient(135deg, hsl(${h} 42% 30%), hsl(${(h + 40) % 360} 45% 16%))` }}
-      className={`art ${seen ? 'art-in' : ''} ${size} ${artist ? 'rounded-full' : fill || big ? 'rounded-2xl' : 'rounded-xl'} relative shrink-0 overflow-hidden shadow-lg shadow-black/40 ring-1 ring-white/10`}>
-      <span aria-hidden className={`absolute inset-0 grid place-items-center font-semibold text-white/60 ${big || fill ? 'text-3xl' : 'text-base'}`}>{name.charAt(0)}</span>
-      {src && !bad && <img src={src} alt="" loading="lazy" onLoad={() => setOk(true)} onError={() => setBad(true)} className={`art-img absolute inset-0 h-full w-full object-cover ${ok ? 'opacity-100' : 'opacity-0'}`} />}
+      data-shape={artist ? 'circle' : undefined} className={`art ${seen ? 'art-in' : ''} ${size} ${round} shadow-lg shadow-black/40 ring-1 ring-white/10`}>
+      <span aria-hidden className={`art-letter ${letter ?? (big || fill ? 'text-3xl' : 'text-base')}`}>{name.charAt(0)}</span>
+      {src && !bad && <img src={src} alt="" loading="lazy" data-ok={ok ? '' : undefined} onLoad={() => setOk(true)} onError={() => setBad(true)} className="art-img" />}
     </div>
   )
 }

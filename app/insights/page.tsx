@@ -2,6 +2,7 @@
 import { useMemo } from 'react'
 import { useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
+import { activity } from '@/lib/stats'
 import Stat from '@/components/Stat'
 import HoursChart from '@/components/Chart'
 
@@ -13,20 +14,10 @@ export default function Insights() {
   const { recs } = useData()
   const { t, num } = useI18n()
   const d = useMemo(() => {
-    const hour: B[] = Array.from({ length: 24 }, (_, k) => ({ k, h: 0 }))
-    const wk: B[] = [0, 1, 2, 3, 4, 5, 6].map((k) => ({ k: t(`wd.${k}` as K), h: 0 }))
-    const days = new Set<number>()
-    for (const r of recs) {
-      const dt = new Date(r.ts)
-      hour[dt.getHours()].h += r.ms
-      wk[dt.getDay()].h += r.ms
-      days.add(Math.floor((r.ts - dt.getTimezoneOffset() * 6e4) / 864e5))
-    }
-    const s = [...days].sort((a, b) => a - b)
-    let best = 0, run = 0
-    s.forEach((x, i) => { run = i && x === s[i - 1] + 1 ? run + 1 : 1; best = Math.max(best, run) })
-    const H = hrs(hour), W = hrs(wk)
-    return { H, W, ph: peak(H), pw: peak(W), best, active: s.length }
+    const a = activity(recs)
+    const H = hrs(a.hours.map((h, k) => ({ k, h })))
+    const W = hrs(a.weekdays.map((h, k) => ({ k: t(`wd.${k}` as K), h })))
+    return { H, W, ph: peak(H), pw: peak(W), best: a.best, active: a.active }
   }, [recs, t])
   return (
     <div className="mx-auto max-w-5xl space-y-6">

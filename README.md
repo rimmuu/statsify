@@ -32,3 +32,6 @@ The **Share** page draws a PNG card (Story 9:16 or Post 1:1; Dark, Purple, Neon,
 
 ## Language and motion
 **Settings > Language** switches the whole interface between English and Bahasa Indonesia. The choice is saved in this browser (localStorage); numbers, dates and durations follow the language. Artist, track and album names and your imported data are never translated. All text lives in one table in `lib/i18n.tsx`, English and Indonesian side by side. Animations are CSS transitions (plus a small count-up) and are turned off when the system asks for reduced motion.
+
+## Wrapped story
+`/wrapped` is a full-screen, seven-slide story built from your own plays: intro (pick all time or a year), listening stats, top artist, top tracks, top albums, music taste, and a recap. Navigate with the on-screen buttons, the progress bar, taps, swipes, or the ← → keys; Esc leaves. Rankings use listening time. Genres are not in Spotify's export, so "taste" shows when you listen (hour of day, favourite weekday, longest streak, top-artist share) instead of invented genres. **Share My Story** uses the Web Share API with a PNG made on your device; where that is unavailable you get Download image and Copy link. The link only opens Statsify and contains none of your data.

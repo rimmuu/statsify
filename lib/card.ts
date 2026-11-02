@@ -1,6 +1,8 @@
 // Draws the shareable stats card straight onto a <canvas> (no extra dependency). The preview IS this canvas,
 // so the exported PNG is pixel-identical to what the user sees. Only real data passed in via `Spec` is drawn.
 
+import type { K } from './i18n'
+
 export type Theme = 'dark' | 'purple' | 'neon' | 'minimal'
 export type Fmt = 'story' | 'square'
 export type Img = HTMLImageElement | null
@@ -208,3 +210,9 @@ export function trackThumb(uri: string): Promise<string> {
   }
   return p
 }
+
+// Localized card text, shared by the Share page and the Wrapped story. Names of artists/tracks/albums are never passed through here.
+export const cardLabels = (t: (k: K, v?: Record<string, string | number>) => string, hm: (ms: number) => string): Labels => ({
+  total: t('ov.total').toUpperCase(), artist: t('s.topArtist').toUpperCase(), album: t('s.topAlbum').toUpperCase(), tracks: t('tl.title.track').toUpperCase(),
+  time: hm, plays: (n) => t('n.plays', { n }), tiny: t('u.lt1'),
+})

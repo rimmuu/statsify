@@ -4,7 +4,7 @@ import { useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
 import { filterByPeriod, group, pad, type Kind, type Row } from '@/lib/stats'
 import { artistPhoto } from '@/lib/artistPhoto'
-import { THEMES, drawCard, loadImg, trackThumb, type Fmt, type Img, type Item, type Labels, type Spec, type Theme } from '@/lib/card'
+import { THEMES, cardLabels, drawCard, loadImg, trackThumb, type Fmt, type Img, type Item, type Labels, type Spec, type Theme } from '@/lib/card'
 import { Notice, useNotice } from '@/components/Notice'
 
 type Per = 'week' | 'month' | 'year' | 'all' | 'custom'
@@ -76,10 +76,7 @@ export default function Share() {
   const a = assets && assets.s === st ? assets : null
 
   // Card text is localized here; artist, track and album names are passed through untouched.
-  const tx = useMemo<Labels>(() => ({
-    total: t('ov.total').toUpperCase(), artist: t('s.topArtist').toUpperCase(), album: t('s.topAlbum').toUpperCase(), tracks: t('tl.title.track').toUpperCase(),
-    time: hm, plays: (n) => t('n.plays', { n }), tiny: t('u.lt1'),
-  }), [t, hm])
+  const tx = useMemo<Labels>(() => cardLabels(t, hm), [t, hm])
 
   const spec = useMemo<Spec | null>(() => {
     if (!st.plays) return null

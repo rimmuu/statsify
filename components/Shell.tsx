@@ -6,7 +6,7 @@ import { Provider, useData } from '@/lib/store'
 import { I18nProvider, useI18n, type K } from '@/lib/i18n'
 import { PERIODS } from '@/lib/stats'
 
-const NAV: [string, K][] = [['/', 'nav.overview'], ['/tracks', 'nav.tracks'], ['/artists', 'nav.artists'], ['/albums', 'nav.albums'], ['/genres', 'nav.genres'], ['/history', 'nav.history'], ['/insights', 'nav.insights'], ['/compare', 'nav.compare'], ['/share', 'nav.share'], ['/settings', 'nav.settings']]
+const NAV: [string, K][] = [['/', 'nav.overview'], ['/tracks', 'nav.tracks'], ['/artists', 'nav.artists'], ['/albums', 'nav.albums'], ['/genres', 'nav.genres'], ['/history', 'nav.history'], ['/insights', 'nav.insights'], ['/compare', 'nav.compare'], ['/wrapped', 'nav.wrapped'], ['/share', 'nav.share'], ['/settings', 'nav.settings']]
 
 function Brand() {
   return (
@@ -28,6 +28,7 @@ function Inner({ children }: { children: ReactNode }) {
     )
   })
   const show = path === '/settings' || (ready && all.length > 0)
+  if (path === '/wrapped') return <>{children}</>
   return (
     <div className="flex min-h-screen">
       <div aria-hidden className="ambient" />

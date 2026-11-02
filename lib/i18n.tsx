@@ -161,6 +161,51 @@ const T = d({
   'sh.makeFail': ['Couldn’t create the image. Try another theme or format.', 'Gagal membuat gambar. Coba tema atau format lain.'],
   'sh.empty': ['No listening data in this period. Pick a longer period or another date range.', 'Tidak ada data mendengarkan pada periode ini. Pilih periode lebih panjang atau rentang tanggal lain.'],
   'sh.preview': ['Preview of your stats card', 'Pratinjau kartu statistikmu'],
+  'nav.wrapped': ['Wrapped', 'Wrapped'],
+  'w.title': ['Your Music Wrapped', 'Cerita Musikmu'],
+  'w.intro.sub': ['Everything you played, replayed as a story.', 'Semua yang kamu putar, dirangkum jadi sebuah cerita.'],
+  'w.start': ['Start Your Story', 'Mulai Ceritamu'],
+  'w.hint': ['Tap, swipe, or use ← → to move.', 'Ketuk, geser, atau gunakan ← → untuk berpindah.'],
+  'w.scope': ['Period', 'Periode'],
+  'w.prev': ['Previous slide', 'Slide sebelumnya'],
+  'w.next': ['Next slide', 'Slide berikutnya'],
+  'w.close': ['Close story', 'Tutup cerita'],
+  'w.goto': ['Go to slide {n}: {title}', 'Ke slide {n}: {title}'],
+  'w.slideOf': ['Slide {n} of {total}', 'Slide {n} dari {total}'],
+  'w.stats.title': ['Listening Stats', 'Statistik Mendengarkan'],
+  'w.stats.songs': ['Songs', 'Lagu'],
+  'w.stats.artists': ['Artists', 'Artis'],
+  'w.stats.albums': ['Albums', 'Album'],
+  'w.stats.time': ['Listening time', 'Waktu mendengarkan'],
+  'w.stats.plays': ['Played {n} time in total.|Played {n} times in total.', 'Diputar {n} kali secara total.|Diputar {n} kali secara total.'],
+  'w.stats.note': ['Songs, artists and albums are counted once, however often you played them.', 'Lagu, artis, dan album dihitung sekali saja, seberapa sering pun kamu memutarnya.'],
+  'w.artist.title': ['Top Artist', 'Artis Teratas'],
+  'w.artist.lead': ['The artist you spent the most time with', 'Artis yang paling banyak menemanimu'],
+  'w.artist.share': ['{p}% of your listening time', '{p}% dari waktu mendengarkanmu'],
+  'w.tracks.title': ['Top Tracks', 'Lagu Teratas'],
+  'w.tracks.basis': ['Ranked by listening time.', 'Diurutkan berdasarkan waktu mendengarkan.'],
+  'w.albums.title': ['Top Albums', 'Album Teratas'],
+  'w.albums.none': ['Album details aren’t available for this period.', 'Detail album tidak tersedia untuk periode ini.'],
+  'w.taste.title': ['Your Music Taste', 'Selera Musikmu'],
+  'w.taste.peak': ['You listen most around {h}', 'Kamu paling sering mendengarkan sekitar pukul {h}'],
+  'w.taste.hours': ['Listening by hour of day', 'Mendengarkan menurut jam'],
+  'w.taste.day': ['Favorite day', 'Hari favorit'],
+  'w.taste.share': ['Top artist share', 'Porsi artis teratas'],
+  'w.taste.genre': ['Genres aren’t part of Spotify’s export, so your taste is described by when and how you listen.', 'Genre bukan bagian dari ekspor Spotify, jadi seleramu dijelaskan lewat kapan dan bagaimana kamu mendengarkan.'],
+  'w.recap.title': ['Your Recap', 'Rangkumanmu'],
+  'w.share': ['Share My Story', 'Bagikan Ceritaku'],
+  'w.replay': ['Replay Story', 'Ulangi Cerita'],
+  'w.full': ['View Full Stats', 'Lihat Statistik Lengkap'],
+  'w.sheet': ['Share your story', 'Bagikan ceritamu'],
+  'w.download': ['Download image', 'Unduh gambar'],
+  'w.copy': ['Copy link', 'Salin tautan'],
+  'w.privacy': ['The image is made on your device. The link only opens Statsify; none of your stats are in it.', 'Gambar dibuat di perangkatmu. Tautannya hanya membuka Statsify; tidak ada statistikmu di dalamnya.'],
+  'w.copied': ['Link copied.', 'Tautan disalin.'],
+  'w.copyFail': ['Couldn’t copy the link. Copy it from the address bar.', 'Tidak bisa menyalin tautan. Salin dari bilah alamat.'],
+  'w.shareFail': ['Couldn’t share directly. You can download the image or copy the link.', 'Tidak bisa membagikan langsung. Kamu bisa mengunduh gambar atau menyalin tautan.'],
+  'w.empty.title': ['Your story starts with your data', 'Ceritamu dimulai dari datamu'],
+  'w.empty.body': ['Import your Spotify history to unlock your Wrapped.', 'Impor riwayat Spotify-mu untuk membuka Wrapped.'],
+  'w.back': ['Back to Statsify', 'Kembali ke Statsify'],
 })
 export type K = keyof typeof T
 const pick = (i: 0 | 1) => Object.fromEntries(Object.entries(T).map(([k, v]) => [k, v[i]])) as Record<K, string>
@@ -179,6 +224,7 @@ type Ctx = {
   dur: (ms: number) => string
   date: (ts: number) => string
   dateTime: (ts: number) => string
+  weekday: (i: number) => string
 }
 const C = createContext<Ctx>(null as unknown as Ctx)
 export const useI18n = () => useContext(C)
@@ -205,6 +251,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     const pf = new Intl.NumberFormat(NUM[lang], { minimumFractionDigits: 1, maximumFractionDigits: 1 })
     const df = new Intl.DateTimeFormat(DATE[lang], { day: 'numeric', month: 'short', year: 'numeric' })
     const dtf = new Intl.DateTimeFormat(DATE[lang], { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    const wf = new Intl.DateTimeFormat(DATE[lang], { weekday: 'long' })
     const t = (k: K, v?: Vars): string => {
       let s = dict[k]
       if (s.includes('|')) {
@@ -218,7 +265,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       const s = Math.floor(ms / 1000)
       return `${Math.floor(s / 86400)}${t('u.d')} ${Math.floor((s % 86400) / 3600)}${t('u.h')} ${Math.floor((s % 3600) / 60)}${t('u.m')} ${s % 60}${t('u.s')}`
     }
-    return { lang, setLang, t, num: (n) => nf.format(n), pct: (n) => pf.format(n), hm, dur, date: (ts) => df.format(new Date(ts)), dateTime: (ts) => dtf.format(new Date(ts)) }
+    return { lang, setLang, t, num: (n) => nf.format(n), pct: (n) => pf.format(n), hm, dur, date: (ts) => df.format(new Date(ts)), dateTime: (ts) => dtf.format(new Date(ts)), weekday: (i) => wf.format(new Date(2024, 0, 7 + i)) }
   }, [lang, setLang])
   return <C.Provider value={value}>{children}</C.Provider>
 }
