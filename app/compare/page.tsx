@@ -1,9 +1,12 @@
 'use client'
 import { useMemo, useState } from 'react'
+import { motion } from 'framer-motion'
 import { Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
 import { group, keyOf, monthly, type Row } from '@/lib/stats'
+import { AnimatedButton, FadeIn } from '@/components/Motion'
+import { ease, spring, time } from '@/lib/motion'
 
 const COLORS = ['#1DB954', '#a78bfa']
 const sel = 'w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm transition-colors hover:border-white/20 sm:py-2'
@@ -31,13 +34,16 @@ export default function Compare() {
       <h1 className="text-2xl font-semibold">{t('cmp.title')}</h1>
       <div className="flex gap-2">
         {(['artist', 'track'] as const).map((k) => (
-          <button key={k} aria-pressed={kind === k} onClick={() => { setKind(k); setPick(['', '']) }} className={`press rounded-full px-4 py-2 text-sm transition ${kind === k ? 'glow-on bg-spotify text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>{k === 'artist' ? t('cmp.artists') : t('cmp.tracks')}</button>
+          <AnimatedButton key={k} aria-pressed={kind === k} onClick={() => { setKind(k); setPick(['', '']) }} className={`relative rounded-full px-4 py-2 text-sm transition-colors ${kind === k ? 'text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
+            {kind === k && <motion.span layoutId="compare-pill" transition={spring} className="absolute inset-0 rounded-full bg-spotify shadow-[0_0_20px_-6px_rgba(29,185,84,0.55)]" />}
+            <span className="relative z-10">{k === 'artist' ? t('cmp.artists') : t('cmp.tracks')}</span>
+          </AnimatedButton>
         ))}
       </div>
       {!s0 || !s1 ? (
-        <p className="text-neutral-400">{t(`cmp.need.${kind}` as K)}</p>
+        <FadeIn><p className="text-neutral-400">{t(`cmp.need.${kind}` as K)}</p></FadeIn>
       ) : (
-        <div key={kind} className="page-in space-y-6">
+        <motion.div key={kind} className="space-y-6" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: time.enter, ease }}>
           <div className="grid gap-3 sm:grid-cols-2">
             {[0, 1].map((i) => (
               <select key={i} aria-label={`${kind === 'artist' ? t('cmp.artists') : t('cmp.tracks')} ${i + 1}`} className={sel} value={sides[i]?.key ?? ''} onChange={(e) => setPick((p): [string, string] => (i ? [p[0], e.target.value] : [e.target.value, p[1]]))}>
@@ -54,12 +60,18 @@ export default function Compare() {
                 </tr>
               </thead>
               <tbody>
-                {METRICS.map(([label, f, time]) => {
-                  const v = [f(s0), f(s1)]
+                {METRICS.map(([label, f, time_]) => {
+                  const v = [f(s0), f(s1)], max = Math.max(...v)
                   return (
                     <tr key={label} className="border-t border-white/5">
                       <td className="py-2 text-neutral-400">{t(label)}</td>
-                      {v.map((x, i) => <td key={i} className={`py-2 tabular-nums transition-colors ${v[0] !== v[1] && x === Math.max(...v) ? 'font-semibold text-white' : 'text-neutral-400'}`}>{time ? hm(x) : num(x)}</td>)}
+                      {v.map((x, i) => (
+                        <td key={i} className={`py-2 tabular-nums transition-colors ${v[0] !== v[1] && x === max ? 'font-semibold text-white' : 'text-neutral-400'}`}>
+                          {time_ ? hm(x) : num(x)}
+                          {/* bar = this value as a share of the larger one (real ratio; it only moves when the selection changes) */}
+                          <motion.div aria-hidden className="mt-1 h-1 w-full origin-left rounded-full" style={{ background: COLORS[i] }} initial={false} animate={{ scaleX: max ? x / max : 0 }} transition={{ duration: time.enter, ease }} />
+                        </td>
+                      ))}
                     </tr>
                   )
                 })}
@@ -74,11 +86,11 @@ export default function Compare() {
                 <YAxis stroke="#737373" fontSize={11} tickLine={false} axisLine={false} width={36} />
                 <Tooltip contentStyle={{ background: '#171717', border: '1px solid #262626', borderRadius: 12 }} formatter={(v) => `${v} ${t('u.h')}`} />
                 <Legend />
-                {[s0, s1].map((s, i) => <Line key={i} type="monotone" dataKey={i ? 'b' : 'a'} name={s.name} stroke={COLORS[i]} strokeWidth={2} dot={false} />)}
+                {[s0, s1].map((s, i) => <Line key={i} isAnimationActive={false} type="monotone" dataKey={i ? 'b' : 'a'} name={s.name} stroke={COLORS[i]} strokeWidth={2} dot={false} />)}
               </LineChart>
             </ResponsiveContainer>
           </div>
-        </div>
+        </motion.div>
       )}
     </div>
   )

@@ -1,6 +1,8 @@
 'use client'
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
+import { motion } from 'framer-motion'
 import { artistPhoto } from '@/lib/artistPhoto'
+import { ease, time } from '@/lib/motion'
 
 const cache = new Map<string, string>()
 
@@ -72,31 +74,26 @@ export const ambient = (rgb: string): CSSProperties | undefined => {
 
 const hue = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h }
 
-// Rounded artwork: scales in when it enters the viewport, crossfades from the initial tile once the image has loaded,
-// and zooms gently on hover (hover-capable devices only; see globals.css). `cls` swaps in custom size/rounding classes.
+// Rounded artwork: scales in once when it scrolls into view, crossfades from the initial tile when the image has loaded,
+// and zooms gently under a mouse (Framer ignores hover on touch screens). `cls` swaps in custom size/rounding classes.
 export default function Art({ u, name, big, fill, cls, letter }: { u: string; name: string; big?: boolean; fill?: boolean; cls?: string; letter?: string }) {
   const src = useArtSrc(u)
   const [ok, setOk] = useState(false)
   const [bad, setBad] = useState(false)
-  const [seen, setSeen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
   useEffect(() => { setOk(false); setBad(false) }, [src])
-  useEffect(() => {
-    const el = ref.current
-    if (!el || typeof IntersectionObserver === 'undefined') { setSeen(true); return }
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { setSeen(true); io.disconnect() } }, { rootMargin: '60px' })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [])
   const artist = u.startsWith('artist:')
   const h = hue(name)
   const size = cls ?? (fill ? 'aspect-square w-full' : big ? 'h-24 w-24 sm:h-32 sm:w-32' : 'h-12 w-12')
   const round = artist ? 'rounded-full' : cls ? '' : fill || big ? 'rounded-2xl' : 'rounded-xl'
   return (
-    <div ref={ref} style={{ background: `linear-gradient(135deg, hsl(${h} 42% 30%), hsl(${(h + 40) % 360} 45% 16%))` }}
-      data-shape={artist ? 'circle' : undefined} className={`art ${seen ? 'art-in' : ''} ${size} ${round} shadow-lg shadow-black/40 ring-1 ring-white/10`}>
+    <motion.div style={{ background: `linear-gradient(135deg, hsl(${h} 42% 30%), hsl(${(h + 40) % 360} 45% 16%))` }} data-shape={artist ? 'circle' : undefined}
+      initial={{ opacity: 0, scale: 0.92 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: '60px' }} transition={{ duration: time.enter, ease }}
+      className={`art ${size} ${round} shadow-lg shadow-black/40 ring-1 ring-white/10`}>
       <span aria-hidden className={`art-letter ${letter ?? (big || fill ? 'text-3xl' : 'text-base')}`}>{name.charAt(0)}</span>
-      {src && !bad && <img src={src} alt="" loading="lazy" data-ok={ok ? '' : undefined} onLoad={() => setOk(true)} onError={() => setBad(true)} className="art-img" />}
-    </div>
+      {src && !bad && (
+        <motion.img src={src} alt="" loading="lazy" data-ok={ok ? '' : undefined} className="art-img" initial={{ opacity: 0 }} animate={{ opacity: ok ? 1 : 0 }} whileHover={{ scale: 1.07 }}
+          transition={{ duration: 0.5, ease }} onLoad={() => setOk(true)} onError={() => setBad(true)} />
+      )}
+    </motion.div>
   )
 }

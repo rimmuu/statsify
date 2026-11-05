@@ -1,19 +1,21 @@
 'use client'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 import { useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
 import { filterByPeriod, group, pad, type Kind, type Row } from '@/lib/stats'
 import { artistPhoto } from '@/lib/artistPhoto'
 import { THEMES, cardLabels, drawCard, loadImg, trackThumb, type Fmt, type Img, type Item, type Labels, type Spec, type Theme } from '@/lib/card'
 import { Notice, useNotice } from '@/components/Notice'
+import { AnimatedButton, FadeIn } from '@/components/Motion'
+import { ease, spring, time } from '@/lib/motion'
 
 type Per = 'week' | 'month' | 'year' | 'all' | 'custom'
 const PERS: { k: Per; d: number }[] = [{ k: 'week', d: 7 }, { k: 'month', d: 30 }, { k: 'year', d: 365 }, { k: 'all', d: 0 }, { k: 'custom', d: 0 }]
 const FMTS: Fmt[] = ['story', 'square']
 const iso = (ts: number) => { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 const toItem = (r: Row | undefined, img: Img | undefined): Item | undefined => (r ? { name: r.name, sub: r.sub, ms: r.ms, plays: r.plays, img: img ?? null } : undefined)
-const pill = (on: boolean) => `press min-h-[40px] rounded-full px-3.5 py-2 text-sm transition ${on ? 'glow-on bg-spotify font-semibold text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`
-const btn = 'press inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50'
+const btn = 'inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50'
 const field = 'w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm outline-none transition-colors focus:border-spotify [color-scheme:dark]'
 
 const Spin = () => <span aria-hidden className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
@@ -25,10 +27,19 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
     </div>
   )
 }
+// Pill whose highlight slides to the selected one (shared layout animation, one layoutId per group).
+function Pill({ on, group: g, onClick, children }: { on: boolean; group: string; onClick: () => void; children: ReactNode }) {
+  return (
+    <AnimatedButton aria-pressed={on} onClick={onClick} className={`relative min-h-[40px] rounded-full px-3.5 py-2 text-sm transition-colors ${on ? 'font-semibold text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
+      {on && <motion.span layoutId={`pill-${g}`} transition={spring} className="absolute inset-0 rounded-full bg-spotify shadow-[0_0_20px_-6px_rgba(29,185,84,0.55)]" />}
+      <span className="relative z-10">{children}</span>
+    </AnimatedButton>
+  )
+}
 
 export default function Share() {
   const { all } = useData()
-  const { t, hm, date, lang } = useI18n()
+  const { t, hm, date } = useI18n()
   const [per, setPer] = useState<Per>('month')
   const [theme, setTheme] = useState<Theme>('dark')
   const [fmt, setFmt] = useState<Fmt>('story')
@@ -90,6 +101,8 @@ export default function Share() {
     }
   }, [theme, fmt, per, st, a, tx, t, date])
 
+  // The canvas is never animated or remounted: it is drawn once per change and exported as drawn, so a PNG can never
+  // capture a half-finished transition. Only the wrapper around it dims while the new card is being prepared.
   useEffect(() => {
     const c = cv.current
     setBlob(null)
@@ -145,45 +158,50 @@ export default function Share() {
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
         <section className="flex min-h-[240px] items-start justify-center">
           {spec ? (
-            <div key={`${theme}-${fmt}-${per}-${lang}`} className="pop w-full">
+            <motion.div className="w-full" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: blob ? 1 : 0.55, scale: 1 }} transition={{ duration: time.enter, ease }}>
               <canvas ref={cv} width={1080} height={fmt === 'story' ? 1920 : 1080} aria-label={t('sh.preview')} className="mx-auto block h-auto max-h-[72vh] w-auto max-w-full rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10" />
-            </div>
+            </motion.div>
           ) : (
-            <div className="card pop w-full text-center text-neutral-400">{t('sh.empty')}</div>
+            <FadeIn className="w-full"><div className="card text-center text-neutral-400">{t('sh.empty')}</div></FadeIn>
           )}
         </section>
         <aside className="space-y-4">
           <div className="card space-y-5">
             <Group label={t('sh.period')}>
               <div className="flex flex-wrap gap-2">
-                {PERS.map((o) => <button key={o.k} aria-pressed={per === o.k} onClick={() => setPer(o.k)} className={pill(per === o.k)}>{t(`sh.p.${o.k}` as K)}</button>)}
+                {PERS.map((o) => <Pill key={o.k} on={per === o.k} group="period" onClick={() => setPer(o.k)}>{t(`sh.p.${o.k}` as K)}</Pill>)}
               </div>
-              {per === 'custom' && (
-                <div className="pop mt-3 grid grid-cols-2 gap-2">
-                  <label className="text-xs text-neutral-500">{t('sh.from')}<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={`${field} mt-1`} /></label>
-                  <label className="text-xs text-neutral-500">{t('sh.to')}<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={`${field} mt-1`} /></label>
-                </div>
-              )}
+              <AnimatePresence initial={false}>
+                {per === 'custom' && (
+                  <motion.div key="range" className="overflow-hidden" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: time.enter, ease }}>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      <label className="text-xs text-neutral-500">{t('sh.from')}<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={`${field} mt-1`} /></label>
+                      <label className="text-xs text-neutral-500">{t('sh.to')}<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={`${field} mt-1`} /></label>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </Group>
             <Group label={t('sh.theme')}>
               <div className="grid grid-cols-2 gap-2">
                 {(Object.keys(THEMES) as Theme[]).map((k) => (
-                  <button key={k} aria-pressed={theme === k} onClick={() => setTheme(k)} className={`press overflow-hidden rounded-xl text-left ring-2 transition ${theme === k ? 'glow-on scale-[1.02] ring-spotify' : 'ring-transparent hover:ring-white/20'}`}>
+                  <AnimatedButton key={k} aria-pressed={theme === k} onClick={() => setTheme(k)} className="relative overflow-hidden rounded-xl text-left ring-1 ring-white/10 transition-shadow hover:ring-white/25">
                     <span className="block h-11" style={{ background: THEMES[k].swatch }} />
                     <span className="block bg-neutral-900 px-3 py-2 text-xs">{t(`th.${k}` as K)}</span>
-                  </button>
+                    {theme === k && <motion.span layoutId="theme-ring" transition={spring} className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-spotify shadow-[0_0_20px_-6px_rgba(29,185,84,0.55)]" />}
+                  </AnimatedButton>
                 ))}
               </div>
             </Group>
             <Group label={t('sh.format')}>
               <div className="flex flex-wrap gap-2">
-                {FMTS.map((k) => <button key={k} aria-pressed={fmt === k} onClick={() => setFmt(k)} className={pill(fmt === k)}>{t(`sh.f.${k}` as K)}</button>)}
+                {FMTS.map((k) => <Pill key={k} on={fmt === k} group="format" onClick={() => setFmt(k)}>{t(`sh.f.${k}` as K)}</Pill>)}
               </div>
             </Group>
           </div>
           <div className="flex gap-2">
-            <button onClick={download} disabled={!blob} className={`${btn} bg-spotify text-black hover:brightness-110`}>{preparing && <Spin />}{preparing ? t('sh.preparing') : t('sh.download')}</button>
-            <button onClick={share} disabled={!blob || busy} className={`${btn} bg-white/10 text-white hover:bg-white/15`}>{(preparing || busy) && <Spin />}{t('sh.share')}</button>
+            <AnimatedButton onClick={download} disabled={!blob} className={`${btn} bg-spotify text-black hover:brightness-110`}>{preparing && <Spin />}{preparing ? t('sh.preparing') : t('sh.download')}</AnimatedButton>
+            <AnimatedButton onClick={share} disabled={!blob || busy} className={`${btn} bg-white/10 text-white hover:bg-white/15`}>{(preparing || busy) && <Spin />}{t('sh.share')}</AnimatedButton>
           </div>
           <Notice note={note} />
         </aside>

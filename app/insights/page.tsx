@@ -5,6 +5,7 @@ import { useI18n, type K } from '@/lib/i18n'
 import { activity } from '@/lib/stats'
 import Stat from '@/components/Stat'
 import HoursChart from '@/components/Chart'
+import { FadeIn, StaggerContainer } from '@/components/Motion'
 
 type B = { k: string | number; h: number }
 const hrs = (a: B[]) => a.map((x) => ({ ...x, h: +(x.h / 3.6e6).toFixed(1) }))
@@ -22,14 +23,14 @@ export default function Insights() {
   return (
     <div className="mx-auto max-w-5xl space-y-6">
       <h1 className="text-2xl font-semibold">{t('i.title')}</h1>
-      <div className="stagger grid grid-cols-2 gap-3 md:grid-cols-4">
+      <StaggerContainer className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <Stat l={t('i.hour')} v={`${d.ph.k}:00`} s={t('i.hourSub')} />
         <Stat l={t('i.day')} v={String(d.pw.k)} />
         <Stat l={t('i.streak')} n={d.best} fmt={(n) => t('n.days', { n: Math.round(n) })} s={t('i.streakSub')} />
         <Stat l={t('i.active')} n={d.active} fmt={num} />
-      </div>
-      <div className="card"><h2 className="mb-4 font-medium">{t('i.byHour')}</h2><HoursChart data={d.H} /></div>
-      <div className="card"><h2 className="mb-4 font-medium">{t('i.byWeek')}</h2><HoursChart data={d.W} /></div>
+      </StaggerContainer>
+      <FadeIn delay={0.2}><div className="card"><h2 className="mb-4 font-medium">{t('i.byHour')}</h2><HoursChart data={d.H} /></div></FadeIn>
+      <FadeIn delay={0.3}><div className="card"><h2 className="mb-4 font-medium">{t('i.byWeek')}</h2><HoursChart data={d.W} /></div></FadeIn>
     </div>
   )
 }

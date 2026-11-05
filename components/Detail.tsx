@@ -7,9 +7,10 @@ import { dec, enc, group, keyOf, mmss, monthly } from '@/lib/stats'
 import Stat from './Stat'
 import Art, { ambient, useAccent, useArtSrc } from './Art'
 import HoursChart from './Chart'
+import { FadeIn, StaggerContainer } from './Motion'
 
 const List = ({ title, children }: { title: string; children: ReactNode }) => (
-  <div className="card"><h2 className="mb-2 font-medium">{title}</h2><div className="divide-y divide-white/5">{children}</div></div>
+  <FadeIn><div className="card"><h2 className="mb-2 font-medium">{title}</h2><div className="divide-y divide-white/5">{children}</div></div></FadeIn>
 )
 
 export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: string }) {
@@ -42,7 +43,7 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <Link href={back} className="inline-block py-1 text-sm text-neutral-400 transition-colors hover:text-white">{t(`d.back.${kind}` as K)}</Link>
-      <div className="amb rounded-3xl p-4 sm:p-6" style={ambient(rgb)}>
+      <FadeIn><div className="amb rounded-3xl p-4 sm:p-6" style={ambient(rgb)}>
         <div className="flex items-center gap-4 sm:gap-6">
           <Art big u={art} name={kind === 'track' ? h.t : h.a} />
           <div className="min-w-0">
@@ -50,16 +51,16 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
             {kind === 'track' && <p className="truncate text-neutral-300">{h.a}{h.al ? ` · ${h.al}` : ''}</p>}
           </div>
         </div>
-      </div>
-      <div className="stagger grid grid-cols-2 gap-3 md:grid-cols-3">
+      </div></FadeIn>
+      <StaggerContainer className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Stat l={t('s.events')} n={d.mine.length} fmt={num} />
         <Stat l={t('s.streams')} n={d.streams} fmt={num} />
         <Stat l={t('d.listen')} v={hm(d.ms)} s={dur(d.ms)} />
         {kind === 'artist' && <Stat l={t('s.uTracks')} n={d.tracks.length} fmt={num} />}
         <Stat l={t('d.first')} v={day(d.first)} s={t('d.allTime')} />
         <Stat l={t('d.last')} v={day(d.last)} s={t('d.allTime')} />
-      </div>
-      <div className="card"><h2 className="mb-4 font-medium">{t('ov.perMonth')}</h2><HoursChart data={d.months} /></div>
+      </StaggerContainer>
+      <FadeIn delay={0.2}><div className="card"><h2 className="mb-4 font-medium">{t('ov.perMonth')}</h2><HoursChart data={d.months} /></div></FadeIn>
       {kind === 'artist' && (
         <>
           <List title={t('d.topTracks')}>

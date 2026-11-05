@@ -6,6 +6,7 @@ import { useI18n, type K } from '@/lib/i18n'
 import { enc, group, type Kind, type Row } from '@/lib/stats'
 import Art from './Art'
 import Dropdown from './Dropdown'
+import { ListItem } from './Motion'
 
 const cls = 'card lift flex items-center gap-3 !p-3'
 function Item({ to, children }: { to: string; children: ReactNode }) {
@@ -17,7 +18,7 @@ const LIMITS = [10, 25, 50, 100, 0]
 
 export default function TopList({ kind }: { kind: Kind }) {
   const { recs, period } = useData()
-  const { t, num, pct, hm } = useI18n()
+  const { t, pct, hm } = useI18n()
   const [n, setN] = useState(50)
   const [sort, setSort] = useState<Sort>('plays')
   const { rows, total } = useMemo(() => {
@@ -26,7 +27,7 @@ export default function TopList({ kind }: { kind: Kind }) {
   }, [recs, kind, sort])
   const share = (r: Row) => (total ? pct((r.ms / total) * 100) : pct(0))
   const shown = rows.slice(0, n || undefined)
-  // Changing the period or sort re-keys the list, so it re-reveals with the stagger animation.
+  // Changing the period, sort or size re-keys the list, so the first rows stagger in again (later rows just appear).
   const listKey = `${period}-${sort}-${n}`
   return (
     <div className="mx-auto max-w-4xl">
@@ -39,9 +40,9 @@ export default function TopList({ kind }: { kind: Kind }) {
       </div>
       <p className="mb-4 text-sm text-neutral-500">{t('tl.help')}</p>
       {kind === 'album' ? (
-        <ul key={listKey} className="stagger grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <ul key={listKey} className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
           {shown.map((r, i) => (
-            <li key={r.key} className="min-w-0">
+            <ListItem key={r.key} index={i} className="min-w-0">
               <div className="card lift !p-3">
                 <div className="relative">
                   <Art fill u={i >= 60 ? '' : r.uri} name={r.name} />
@@ -52,13 +53,13 @@ export default function TopList({ kind }: { kind: Kind }) {
                 <div className="mt-1 text-xs tabular-nums text-neutral-300">{hm(r.ms)} · {share(r)}%</div>
                 <div className="text-xs tabular-nums text-neutral-500">{t('n.plays', { n: r.plays })} · {t('n.streams', { n: r.streams })}</div>
               </div>
-            </li>
+            </ListItem>
           ))}
         </ul>
       ) : (
-        <ul key={listKey} className="stagger space-y-2">
+        <ul key={listKey} className="space-y-2">
           {shown.map((r, i) => (
-            <li key={r.key}>
+            <ListItem key={r.key} index={i}>
               <Item to={`/${kind}s/${enc(r.key)}`}>
                 <span className="w-8 shrink-0 text-center text-sm tabular-nums text-neutral-500">{i + 1}</span>
                 <Art u={i >= 60 ? '' : kind === 'artist' ? `artist:${r.name}` : r.uri} name={r.name} />
@@ -71,7 +72,7 @@ export default function TopList({ kind }: { kind: Kind }) {
                   <div className="text-neutral-500">{t('n.plays', { n: r.plays })} · {t('n.streams', { n: r.streams })}</div>
                 </div>
               </Item>
-            </li>
+            </ListItem>
           ))}
         </ul>
       )}
