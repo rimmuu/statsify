@@ -25,3 +25,5 @@ export const riseV: Variants = { hidden: { opacity: 0, y: 14 }, show: (delay: nu
 export const hoverLift = { y: -2 }
 export const tapPress = { scale: 0.96 }
 export const tapCard = { scale: 0.985 }
+// Pointer-following 3D tilt (album cards): soft, and quick to settle.
+export const tiltSpring = { stiffness: 220, damping: 24, mass: 0.7 }

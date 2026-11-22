@@ -2,6 +2,7 @@
 import { useEffect, useState, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import { artistPhoto } from '@/lib/artistPhoto'
+import { apiArt } from '@/lib/apiArt'
 import { ease, time } from '@/lib/motion'
 
 const cache = new Map<string, string>()
@@ -20,6 +21,8 @@ export function useArtSrc(u: string): string {
     if (!u.startsWith('spotify:track:')) { setSrc(''); return }
     const hit = cache.get(u)
     if (hit !== undefined) { setSrc(hit); return }
+    const known = apiArt(u) // artwork that came with a Spotify API response
+    if (known) { cache.set(u, known); setSrc(known); return }
     fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(u.replace('spotify:track:', 'https://open.spotify.com/track/')))
       .then((r) => r.json())
       .then((j) => { cache.set(u, j.thumbnail_url || ''); if (!off) setSrc(j.thumbnail_url || '') })

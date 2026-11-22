@@ -6,14 +6,21 @@ import { group, pad, type Row } from '@/lib/stats'
 import Stat from '@/components/Stat'
 import HoursChart from '@/components/Chart'
 import CountUp from '@/components/CountUp'
-import { FadeIn, StaggerContainer } from '@/components/Motion'
+import { FadeIn, Reveal, StaggerContainer } from '@/components/Motion'
 import Art, { ambient, useAccent, useArtSrc } from '@/components/Art'
+import SpotifyTop from '@/components/SpotifyTop'
+import { useSpotify } from '@/lib/spotify/provider'
+import { artistsOf } from '@/lib/spotify/store'
+import { genreShares } from '@/lib/spotify/genres'
 
 const top = (x: Row[]) => x.reduce<Row | undefined>((b, r) => (!b || r.ms > b.ms ? r : b), undefined)
 
 export default function Overview() {
   const { recs } = useData()
   const { t, num, hm, dur } = useI18n()
+  const { top: spTop } = useSpotify()
+  // Spotify tags artists with genres. The favourite one comes from the top artists (API), not from listening time.
+  const favGenre = useMemo(() => genreShares(artistsOf(spTop, 'medium_term'), 1)[0]?.genre, [spTop])
   const d = useMemo(() => {
     const tr = group(recs, 'track'), ar = group(recs, 'artist'), al = group(recs, 'album')
     const m = new Map<string, number>()
@@ -53,14 +60,15 @@ export default function Overview() {
         <Stat l={t('s.topTrack')} v={d.t?.name ?? '–'} s={d.t?.sub} />
         <Stat l={t('s.topArtist')} v={d.a?.name ?? '–'} s={d.a && hm(d.a.ms)} />
         <Stat l={t('s.topAlbum')} v={d.l?.name ?? '–'} s={d.l?.sub} />
-        <Stat l={t('s.favGenre')} v={t('s.unavailable')} s={t('s.notInExport')} />
+        <Stat l={t('s.favGenre')} v={favGenre ?? t('s.unavailable')} s={favGenre ? t('sp.genre.sub') : t('s.notInExport')} />
       </StaggerContainer>
-      <FadeIn delay={0.3}>
+      <Reveal>
         <div className="card">
           <h2 className="mb-4 font-medium">{t('ov.perMonth')}</h2>
           <HoursChart data={d.months} />
         </div>
-      </FadeIn>
+      </Reveal>
+      <SpotifyTop />
     </div>
   )
 }

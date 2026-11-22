@@ -39,6 +39,14 @@ export async function loadAll(): Promise<Rec[]> {
   db.close()
   return all as Rec[]
 }
+export async function removeMany(ids: string[]) {
+  const db = await open()
+  const tx = db.transaction('plays', 'readwrite')
+  const s = tx.objectStore('plays')
+  for (const id of ids) s.delete(id)
+  await done(tx)
+  db.close()
+}
 export async function clearAll() {
   const db = await open()
   const tx = db.transaction('plays', 'readwrite')

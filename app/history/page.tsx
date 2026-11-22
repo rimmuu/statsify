@@ -4,6 +4,7 @@ import { useData } from '@/lib/store'
 import { useI18n } from '@/lib/i18n'
 import { mmss } from '@/lib/stats'
 import { AnimatedButton, ListItem } from '@/components/Motion'
+import ListenLinks from '@/components/ListenLinks'
 
 export default function History() {
   const { recs, period } = useData()
@@ -29,6 +30,7 @@ export default function History() {
               <div className="truncate text-sm text-neutral-500">{r.a} · {dateTime(r.ts)}</div>
             </div>
             <div className="text-sm tabular-nums text-neutral-400">{mmss(r.ms)}</div>
+            <ListenLinks compact item={{ kind: 'track', name: r.t, artist: r.a, album: r.al, uri: r.u }} />
           </ListItem>
         ))}
       </ul>

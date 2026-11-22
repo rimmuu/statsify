@@ -4,10 +4,11 @@ import { usePathname } from 'next/navigation'
 import type { ReactNode } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
 import { Provider, useData } from '@/lib/store'
+import { SpotifyProvider } from '@/lib/spotify/provider'
 import { I18nProvider, useI18n, type K } from '@/lib/i18n'
 import { PERIODS } from '@/lib/stats'
 import { ease, spring, tapPress, time } from '@/lib/motion'
-import { AnimatedButton, FadeIn, MotionRoot, PageTransition } from './Motion'
+import { AnimatedButton, FadeIn, MotionRoot, PageSkeleton, PageTransition } from './Motion'
 
 const NAV: [string, K][] = [['/', 'nav.overview'], ['/tracks', 'nav.tracks'], ['/artists', 'nav.artists'], ['/albums', 'nav.albums'], ['/genres', 'nav.genres'], ['/history', 'nav.history'], ['/insights', 'nav.insights'], ['/compare', 'nav.compare'], ['/wrapped', 'nav.wrapped'], ['/share', 'nav.share'], ['/settings', 'nav.settings']]
 
@@ -79,7 +80,7 @@ function Inner({ children }: { children: ReactNode }) {
                 <Link href="/settings" className="inline-block rounded-full bg-spotify px-5 py-2.5 font-medium text-black">{t('e.cta')}</Link>
               </motion.div>
             </FadeIn>
-          ) : <p className="text-neutral-500">{t('common.loading')}</p>}
+          ) : <PageSkeleton label={t('common.loading')} />}
         </main>
         <footer className="border-t border-white/5 px-4 py-6 text-center text-xs text-neutral-500 md:px-8 md:text-left">
           {t('foot')} <span className="text-neutral-300">Rimmuu</span> © 2026
@@ -90,5 +91,5 @@ function Inner({ children }: { children: ReactNode }) {
 }
 
 export default function Shell({ children }: { children: ReactNode }) {
-  return <I18nProvider><Provider><MotionRoot><Inner>{children}</Inner></MotionRoot></Provider></I18nProvider>
+  return <I18nProvider><Provider><SpotifyProvider><MotionRoot><Inner>{children}</Inner></MotionRoot></SpotifyProvider></Provider></I18nProvider>
 }

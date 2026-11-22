@@ -1,16 +1,18 @@
 'use client'
+import { useReducedMotion } from 'framer-motion'
 import { useI18n } from '@/lib/i18n'
 import { Bar, BarChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 
 export default function HoursChart({ data }: { data: { k: string | number; h: number }[] }) {
   const { t } = useI18n()
+  const reduce = useReducedMotion() // bars grow and re-flow when the data changes, unless the device asks for less motion
   return (
     <ResponsiveContainer width="100%" height={260}>
       <BarChart data={data}>
         <XAxis dataKey="k" stroke="#737373" fontSize={11} tickLine={false} axisLine={false} minTickGap={16} />
         <YAxis stroke="#737373" fontSize={11} tickLine={false} axisLine={false} width={36} />
         <Tooltip cursor={{ fill: 'rgba(255,255,255,.05)' }} contentStyle={{ background: '#171717', border: '1px solid #262626', borderRadius: 12 }} formatter={(v) => `${v} ${t('u.h')}`} />
-        <Bar isAnimationActive={false} dataKey="h" fill="#1DB954" radius={[4, 4, 0, 0]} />
+        <Bar isAnimationActive={!reduce} animationDuration={650} animationEasing="ease-out" dataKey="h" fill="#1DB954" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

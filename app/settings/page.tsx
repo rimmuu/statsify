@@ -6,8 +6,12 @@ import { useI18n, type Lang } from '@/lib/i18n'
 import { importFiles, type Result } from '@/lib/import'
 import { clearAll } from '@/lib/db'
 import { clearPhotoCache, photosEnabled, setPhotosEnabled } from '@/lib/artistPhoto'
-import { AnimatedButton, FadeIn } from '@/components/Motion'
+import { AnimatedButton, FadeIn, Switch } from '@/components/Motion'
 import { ease, hoverLift, spring, tapCard, time } from '@/lib/motion'
+import { useSpotify } from '@/lib/spotify/provider'
+import { reconcileApi } from '@/lib/spotify/sync'
+import SpotifyAccount from '@/components/SpotifyAccount'
+import { ConfirmDialog } from '@/components/Dialog'
 
 const LANGS: [Lang, string, string][] = [['id', '🇮🇩', 'Bahasa Indonesia'], ['en', '🇬🇧', 'English']]
 const enter = { initial: { opacity: 0, y: 8 }, animate: { opacity: 1, y: 0 }, transition: { duration: time.enter, ease } }
@@ -19,6 +23,8 @@ export default function Settings() {
   const [err, setErr] = useState('')
   const [res, setRes] = useState<Result | null>(null)
   const [busy, setBusy] = useState(false)
+  const [askClear, setAskClear] = useState(false)
+  const sp = useSpotify()
   const [photos, setPhotos] = useState(true)
   useEffect(() => { setPhotos(photosEnabled()) }, [])
 
@@ -29,6 +35,8 @@ export default function Settings() {
     setErr('')
     try {
       setRes(await importFiles(fs, (p, name, i, n) => setProg({ p, name, i, n })))
+      // Plays synced from the Spotify API that this import now covers would be counted twice: the import has the exact time.
+      await reconcileApi().catch(() => 0)
       await reload()
     } catch (e) {
       setErr((e as Error).message)
@@ -36,19 +44,23 @@ export default function Settings() {
     setBusy(false)
   }
   const wipe = async () => {
-    if (confirm(t('set.confirm'))) {
-      await clearAll()
-      clearPhotoCache()
-      await reload()
-      setRes(null)
-      setProg(null)
-      setErr('')
-    }
+    setAskClear(false)
+    await clearAll()
+    clearPhotoCache()
+    sp.clearLocal()
+    await reload()
+    setRes(null)
+    setProg(null)
+    setErr('')
   }
+  const fromApi = all.reduce((n, r) => n + (r.src === 'api' ? 1 : 0), 0)
   return (
     <div className="mx-auto max-w-xl space-y-6">
       <h1 className="text-2xl font-semibold">{t('set.title')}</h1>
       <FadeIn>
+        <SpotifyAccount />
+      </FadeIn>
+      <FadeIn delay={0.04}>
         <div className="card">
           <div className="font-medium">{t('set.lang')}</div>
           <p className="mt-1 text-sm text-neutral-400">{t('set.langHelp')}</p>
@@ -100,15 +112,23 @@ export default function Settings() {
             <span className="block font-medium">{t('set.photos')}</span>
             <span className="text-sm text-neutral-400">{t('set.photosHelp')}</span>
           </span>
-          <input type="checkbox" checked={photos} onChange={(e) => { setPhotosEnabled(e.target.checked); setPhotos(e.target.checked) }} className="h-5 w-5 shrink-0 accent-[#1DB954]" />
+          <Switch checked={photos} onChange={(on) => { setPhotosEnabled(on); setPhotos(on) }} label={t('set.photos')} />
         </motion.label>
       </FadeIn>
       <FadeIn delay={0.18}>
-        <div className="card flex items-center justify-between gap-3">
-          <span>{t('set.stored', { n: all.length })}</span>
-          <AnimatedButton onClick={wipe} className="min-h-[44px] rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 sm:min-h-0">{t('set.clear')}</AnimatedButton>
+        <div className="card space-y-3">
+          <div className="font-medium">{t('dm.title')}</div>
+          <dl className="space-y-1 text-sm">
+            <div className="flex justify-between gap-3"><dt className="text-neutral-400">{t('dm.imported')}</dt><dd className="tabular-nums">{num(all.length - fromApi)}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-neutral-400">{t('dm.api')}</dt><dd className="tabular-nums">{num(fromApi)}</dd></div>
+          </dl>
+          <div className="flex items-center justify-between gap-3 border-t border-white/5 pt-3">
+            <span>{t('set.stored', { n: all.length })}</span>
+            <AnimatedButton onClick={() => setAskClear(true)} className="min-h-[44px] rounded-lg bg-red-500/10 px-3 py-2 text-sm text-red-400 transition-colors hover:bg-red-500/20 sm:min-h-0">{t('set.clear')}</AnimatedButton>
+          </div>
         </div>
       </FadeIn>
+      <ConfirmDialog open={askClear} title={t('dm.confirmTitle')} body={t('dm.confirmBody')} confirmLabel={t('set.clear')} cancelLabel={t('dm.cancel')} danger onConfirm={wipe} onCancel={() => setAskClear(false)} />
     </div>
   )
 }

@@ -13,7 +13,7 @@ let timer: ReturnType<typeof setTimeout> | undefined
 let chain: Promise<unknown> = Promise.resolve()
 const pending = new Map<string, Promise<string>>()
 
-const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(NON, ' ').trim()
+export const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(NON, ' ').trim()
 
 function load(): Record<string, string> {
   if (!store) {
@@ -43,6 +43,20 @@ export function clearPhotoCache() {
   store = {}
   pending.clear()
   try { localStorage.removeItem(KEY) } catch {}
+}
+
+// Photos that arrived with Spotify API responses (top artists). They belong to the exact Spotify artist, so unlike a
+// Wikipedia match they cannot be the wrong person: they fill gaps and replace "not found".
+export function seedArtistPhotos(entries: [string, string][]) {
+  const s = load()
+  let changed = false
+  for (const [name, url] of entries) {
+    const k = norm(name)
+    if (!k || !url.startsWith('https://') || s[k] === url) continue
+    s[k] = url
+    changed = true
+  }
+  if (changed) save()
 }
 
 async function lookup(name: string, k: string): Promise<string> {

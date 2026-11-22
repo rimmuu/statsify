@@ -5,7 +5,7 @@ import { useI18n, type K } from '@/lib/i18n'
 import { activity } from '@/lib/stats'
 import Stat from '@/components/Stat'
 import HoursChart from '@/components/Chart'
-import { FadeIn, StaggerContainer } from '@/components/Motion'
+import { Reveal, StaggerContainer } from '@/components/Motion'
 
 type B = { k: string | number; h: number }
 const hrs = (a: B[]) => a.map((x) => ({ ...x, h: +(x.h / 3.6e6).toFixed(1) }))
@@ -29,8 +29,8 @@ export default function Insights() {
         <Stat l={t('i.streak')} n={d.best} fmt={(n) => t('n.days', { n: Math.round(n) })} s={t('i.streakSub')} />
         <Stat l={t('i.active')} n={d.active} fmt={num} />
       </StaggerContainer>
-      <FadeIn delay={0.2}><div className="card"><h2 className="mb-4 font-medium">{t('i.byHour')}</h2><HoursChart data={d.H} /></div></FadeIn>
-      <FadeIn delay={0.3}><div className="card"><h2 className="mb-4 font-medium">{t('i.byWeek')}</h2><HoursChart data={d.W} /></div></FadeIn>
+      <Reveal><div className="card"><h2 className="mb-4 font-medium">{t('i.byHour')}</h2><HoursChart data={d.H} /></div></Reveal>
+      <Reveal><div className="card"><h2 className="mb-4 font-medium">{t('i.byWeek')}</h2><HoursChart data={d.W} /></div></Reveal>
     </div>
   )
 }

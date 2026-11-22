@@ -7,7 +7,10 @@ import { dec, enc, group, keyOf, mmss, monthly } from '@/lib/stats'
 import Stat from './Stat'
 import Art, { ambient, useAccent, useArtSrc } from './Art'
 import HoursChart from './Chart'
-import { FadeIn, StaggerContainer } from './Motion'
+import { FadeIn, Reveal, ScrollParallax, StaggerContainer } from './Motion'
+import ListenLinks from './ListenLinks'
+import { useSpotify } from '@/lib/spotify/provider'
+import { artistUri } from '@/lib/spotify/store'
 
 const List = ({ title, children }: { title: string; children: ReactNode }) => (
   <FadeIn><div className="card"><h2 className="mb-2 font-medium">{title}</h2><div className="divide-y divide-white/5">{children}</div></div></FadeIn>
@@ -15,6 +18,7 @@ const List = ({ title, children }: { title: string; children: ReactNode }) => (
 
 export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: string }) {
   const { all, recs, ready } = useData()
+  const { top: spTop } = useSpotify()
   const { t, num, hm, dur, date, dateTime } = useI18n()
   const key = dec(id)
   const d = useMemo(() => {
@@ -45,12 +49,13 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
       <Link href={back} className="inline-block py-1 text-sm text-neutral-400 transition-colors hover:text-white">{t(`d.back.${kind}` as K)}</Link>
       <FadeIn><div className="amb rounded-3xl p-4 sm:p-6" style={ambient(rgb)}>
         <div className="flex items-center gap-4 sm:gap-6">
-          <Art big u={art} name={kind === 'track' ? h.t : h.a} />
+          {kind === 'artist' ? <ScrollParallax className="shrink-0"><Art big u={art} name={h.a} /></ScrollParallax> : <Art big u={art} name={h.t} />}
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-semibold sm:text-3xl">{kind === 'track' ? h.t : h.a}</h1>
             {kind === 'track' && <p className="truncate text-neutral-300">{h.a}{h.al ? ` · ${h.al}` : ''}</p>}
           </div>
         </div>
+        <ListenLinks className="mt-4" item={{ kind, name: kind === 'track' ? h.t : h.a, artist: h.a, album: h.al, uri: kind === 'artist' ? artistUri(spTop, h.a) : h.u }} />
       </div></FadeIn>
       <StaggerContainer className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Stat l={t('s.events')} n={d.mine.length} fmt={num} />
@@ -60,22 +65,28 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
         <Stat l={t('d.first')} v={day(d.first)} s={t('d.allTime')} />
         <Stat l={t('d.last')} v={day(d.last)} s={t('d.allTime')} />
       </StaggerContainer>
-      <FadeIn delay={0.2}><div className="card"><h2 className="mb-4 font-medium">{t('ov.perMonth')}</h2><HoursChart data={d.months} /></div></FadeIn>
+      <Reveal><div className="card"><h2 className="mb-4 font-medium">{t('ov.perMonth')}</h2><HoursChart data={d.months} /></div></Reveal>
       {kind === 'artist' && (
         <>
           <List title={t('d.topTracks')}>
             {d.tracks.slice(0, 10).map((r, i) => (
-              <Link key={r.key} href={`/tracks/${enc(r.key)}`} className="flex justify-between gap-3 py-2 transition-colors hover:text-spotify">
-                <span className="truncate">{i + 1}. {r.name}</span>
-                <span className="shrink-0 text-sm text-neutral-400">{hm(r.ms)} · {t('n.plays', { n: r.plays })}</span>
-              </Link>
+              <div key={r.key} className="flex flex-wrap items-center gap-x-3">
+                <Link href={`/tracks/${enc(r.key)}`} className="flex min-w-0 basis-full justify-between gap-3 py-2 transition-colors hover:text-spotify sm:basis-0 sm:flex-1">
+                  <span className="truncate">{i + 1}. {r.name}</span>
+                  <span className="shrink-0 text-sm text-neutral-400">{hm(r.ms)} · {t('n.plays', { n: r.plays })}</span>
+                </Link>
+                <ListenLinks compact className="ml-auto pb-2 sm:pb-0" item={{ kind: 'track', name: r.name, artist: r.sub, uri: r.uri }} />
+              </div>
             ))}
           </List>
           <List title={t('d.topAlbums')}>
             {d.albums.slice(0, 5).map((r) => (
-              <div key={r.key} className="flex justify-between gap-3 py-2">
-                <span className="truncate">{r.name}</span>
-                <span className="shrink-0 text-sm text-neutral-400">{hm(r.ms)} · {t('n.plays', { n: r.plays })}</span>
+              <div key={r.key} className="flex flex-wrap items-center gap-x-3">
+                <div className="flex min-w-0 basis-full justify-between gap-3 py-2 sm:basis-0 sm:flex-1">
+                  <span className="truncate">{r.name}</span>
+                  <span className="shrink-0 text-sm text-neutral-400">{hm(r.ms)} · {t('n.plays', { n: r.plays })}</span>
+                </div>
+                <ListenLinks compact className="ml-auto pb-2 sm:pb-0" item={{ kind: 'album', name: r.name, artist: r.sub }} />
               </div>
             ))}
           </List>

@@ -1,4 +1,5 @@
-export type Rec = { id: string; ts: number; ms: number; t: string; a: string; al: string; u: string }
+// src: 'api' marks a play synced from the Spotify API (its ms is the track length, not a measured value). No src = imported from the export.
+export type Rec = { id: string; ts: number; ms: number; t: string; a: string; al: string; u: string; src?: 'api' }
 export type Kind = 'track' | 'artist' | 'album'
 export type Row = { key: string; name: string; sub: string; ms: number; plays: number; streams: number; tracks: number; last: number; uri: string }
 

@@ -199,3 +199,9 @@ a:focus-visible, button:focus-visible, select:focus-visible, input:focus-visible
 @media (prefers-reduced-motion: reduce) {
   *, ::before, ::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Skeleton loading placeholder: a soft shimmer. Only transform moves, so it stays on the GPU. The reduced-motion rule above
+   shortens the animation to one instant frame, which leaves a plain tinted block. */
+.skeleton { position: relative; overflow: hidden; border-radius: 0.75rem; background: rgba(255, 255, 255, 0.05); }
+.skeleton::after { content: ''; position: absolute; inset: 0; transform: translateX(-100%); background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.06), transparent); animation: skeleton 1.5s ease-in-out infinite; }
+@keyframes skeleton { to { transform: translateX(100%); } }
