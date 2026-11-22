@@ -1,0 +1,29 @@
+
+name: Install Statsify Premium
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Extract ZIP
+        run: |
+          unzip -q statsify-premium-upgrade-fixed.zip -d /tmp/statsify
+          cp -a /tmp/statsify/spotify-stats/. .
+          rm statsify-premium-upgrade-fixed.zip
+
+      - name: Push changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Install Statsify Premium Upgrade"
+          git push
