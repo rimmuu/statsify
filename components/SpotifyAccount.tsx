@@ -10,22 +10,20 @@ import { AnimatedButton, Skeleton, Switch } from './Motion'
 import { Notice, useNotice } from './Notice'
 import { RANGE_KEY } from './RangeTabs'
 
-const ERR: Record<SpotifyErrorCode, K> = {
-  not_configured: 'sp.err.not_configured',
-  unauthorized: 'sp.err.unauthorized',
-  reauthorize: 'sp.err.reauthorize',
-  forbidden: 'sp.err.forbidden',
-  rate_limited: 'sp.err.rate_limited',
-  quota: 'sp.err.quota',
-  upstream: 'sp.err.upstream',
-  network: 'sp.err.network',
-  bad_request: 'sp.err.bad_request',
-}
 const STEP: Record<'recent' | 'tracks' | 'artists', K> = { recent: 'sp.step.recent', tracks: 'sp.step.tracks', artists: 'sp.step.artists' }
-// What /api/spotify/callback puts in the URL when it sends the browser back here (a short word, never a code or a token).
-const BACK: Record<string, K> = { denied: 'sp.cb.denied', state: 'sp.cb.state', expired: 'sp.cb.expired', exchange: 'sp.cb.exchange', forbidden: 'sp.cb.forbidden', config: 'sp.cb.config' }
 const RETRYABLE: SpotifyErrorCode[] = ['network', 'upstream', 'rate_limited']
 const fade = { initial: { opacity: 0, y: 6 }, animate: { opacity: 1, y: 0 }, exit: { opacity: 0, y: 6 }, transition: { duration: time.enter, ease } }
+
+// Every Spotify problem (not set up, login refused, sync failed) shows this same message for now.
+function ComingSoon({ tone }: { tone: string }) {
+  const { t } = useI18n()
+  return (
+    <>
+      <p className="font-medium">{t('sp.soon.title')}</p>
+      <p className={tone}>{t('sp.soon.body')}</p>
+    </>
+  )
+}
 
 // A plain link, not next/link: signing in is a full-page trip to Spotify and back, and nothing should prefetch it.
 function ConnectLink({ label }: { label: string }) {
@@ -41,13 +39,15 @@ export default function SpotifyAccount() {
   const sp = useSpotify()
   const { note, flash } = useNotice()
   const [askOff, setAskOff] = useState(false)
+  const [backFailed, setBackFailed] = useState(false)
 
   // Back from Spotify's consent screen: /settings?spotify=connected or ?spotify=error&reason=...
   useEffect(() => {
     const q = new URLSearchParams(window.location.search)
     const s = q.get('spotify')
     if (!s) return
-    flash(s === 'connected', t(s === 'connected' ? 'sp.cb.connected' : BACK[q.get('reason') ?? ''] ?? 'sp.cb.exchange'))
+    if (s === 'connected') flash(true, t('sp.cb.connected'))
+    else setBackFailed(true) // whatever went wrong on the way back, the card shows the same message
     window.history.replaceState(null, '', window.location.pathname)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -78,8 +78,7 @@ export default function SpotifyAccount() {
         </div>
       ) : !status.configured ? (
         <div className="space-y-1 rounded-xl bg-amber-500/10 p-3 text-sm text-amber-300">
-          <p className="font-medium">{t('sp.noconfig')}</p>
-          <p className="text-amber-200/80">{t('sp.noconfigHelp')}</p>
+          <ComingSoon tone="text-amber-200/80" />
         </div>
       ) : !connected ? (
         <div className="space-y-4">
@@ -128,17 +127,21 @@ export default function SpotifyAccount() {
         {result && !syncing && (
           <motion.p key="result" {...fade} className="text-sm leading-6 text-neutral-300">
             {t('sp.result', { added: num(result.added), dupes: num(result.dupes), skipped: num(result.skipped) })}
-            {!result.topComplete && ` ${t('sp.partial')}`}
           </motion.p>
         )}
         {problem && (
           <motion.div key="problem" role="alert" {...fade} className="space-y-3 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">
-            <p>{t(ERR[problem.code], { s: problem.retryAfter ?? 30 })}</p>
+            <ComingSoon tone="text-red-200/80" />
             {RETRYABLE.includes(problem.code) && (
               <AnimatedButton onClick={() => void (status ? sp.sync() : sp.refresh())} disabled={syncing} className="min-h-[40px] rounded-lg bg-white/10 px-3 py-1.5 text-white disabled:opacity-60">
                 {t('sp.retry')}
               </AnimatedButton>
             )}
+          </motion.div>
+        )}
+        {backFailed && !problem && status?.configured && (
+          <motion.div key="back" role="alert" {...fade} className="space-y-1 rounded-xl bg-red-500/10 p-3 text-sm text-red-300">
+            <ComingSoon tone="text-red-200/80" />
           </motion.div>
         )}
       </AnimatePresence>

@@ -6,7 +6,7 @@ import { ease, tapPress, time } from '@/lib/motion'
 import { appleSearchUrl, cachedApple, resolveApple, spotifyUrl, type ListenItem } from '@/lib/listen'
 
 type Brand = 'spotify' | 'apple'
-type Link = { brand: Brand; href: string; exact: boolean; label: string; warm?: () => void }
+type Link = { brand: Brand; href: string; exact: boolean; label: string; warm?: () => void; click?: (e: { preventDefault: () => void }) => void }
 
 // Brand marks drawn inline (nothing to load): Spotify's green disc with three arcs, Apple Music's red tile with a note.
 function Mark({ brand, cls }: { brand: Brand; cls: string }) {
@@ -62,9 +62,18 @@ export default function ListenLinks({ item, compact = false, className = '' }: {
   const [apple, warm] = useAppleUrl(item, !compact)
   if (!item.name) return null
   const sp = spotifyUrl(item)
+  // A phone has no hover, so the exact link may not be ready yet when the button is tapped. Wait a moment for it instead of
+  // opening the search link, which the Music app on iPhone shows as its Home screen. Desktop opens the link at once.
+  const tapApple = (e: { preventDefault: () => void }) => {
+    if (apple || cachedApple(item) !== undefined || !window.matchMedia('(hover: none)').matches) return
+    e.preventDefault()
+    const fallback = appleSearchUrl(item)
+    const patience = new Promise<string>((r) => setTimeout(() => r(''), 3500))
+    void Promise.race([resolveApple(item), patience]).then((u) => window.location.assign(u || fallback))
+  }
   const links: Link[] = [
     { brand: 'spotify', href: sp.url, exact: sp.exact, label: t('ls.spotify') },
-    { brand: 'apple', href: apple || appleSearchUrl(item), exact: apple !== '', label: t('ls.apple'), warm },
+    { brand: 'apple', href: apple || appleSearchUrl(item), exact: apple !== '', label: t('ls.apple'), warm, click: tapApple },
   ]
   return (
     <div className={`${compact ? 'flex items-center gap-2' : 'flex flex-wrap gap-2'} ${className}`}>
@@ -80,6 +89,7 @@ export default function ListenLinks({ item, compact = false, className = '' }: {
           onPointerEnter={l.warm}
           onFocus={l.warm}
           onTouchStart={l.warm}
+          onClick={l.click}
           whileHover={{ y: -1 }}
           whileTap={tapPress}
           transition={{ duration: time.micro, ease }}

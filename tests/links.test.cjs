@@ -1,10 +1,11 @@
-// Listening links: Spotify URLs, Apple Music matching, cache, rate limit and error handling (fake iTunes API).
+// Listening links: Spotify URLs, Apple Music matching, and the browser side of the lookup (storefronts, cache, pauses after failures).
+// The browser asks this app's /api/apple route, which is faked here; the route itself is tested in apple.test.cjs.
 const OUT = process.env.STATSIFY_OUT
 const assert = require('assert')
 const store = {}
 global.localStorage = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v) }, removeItem: (k) => { delete store[k] } }
 let calls = []
-let responder = () => ({ ok: true, json: async () => ({ results: [] }) })
+let responder = () => ({ ok: true, json: async () => ({ url: '' }) })
 global.fetch = async (url) => { calls.push(String(url)); return responder(String(url)) }
 const realST = global.setTimeout
 global.setTimeout = (fn) => realST(fn, 0) // collapse the 3 s spacing and the 800 ms save debounce
@@ -66,37 +67,52 @@ const T = (name, artist, album, uri) => ({ kind: 'track', name, artist, album, u
   })
   await ok('never returns a link on a non-Apple host', () => assert.strictEqual(L.pickApple(T('Song', 'Band'), [{ trackName: 'Song', artistName: 'Band', trackViewUrl: 'https://evil.example/song' }, { trackName: 'Song', artistName: 'Band', trackViewUrl: 'http://music.apple.com/x' }]), ''))
 
-  console.log('Lookup, cache, rate limit (mocked fetch)')
-  const hit = { ok: true, json: async () => ({ results: [song('Blinding Lights', 'The Weeknd', 'After Hours', 4)] }) }
-  responder = () => hit
+  console.log("Lookup, cache, pauses (calls to this app's /api/apple route, faked here)")
+  const setLang = (language) => Object.defineProperty(globalThis, 'navigator', { value: { language }, configurable: true })
+  await ok('storefronts: the device region first, then the US catalogue', () => {
+    for (const [lang, want] of [['id-ID', ['ID', 'US']], ['en-ID', ['ID', 'US']], ['id', ['ID', 'US']], ['en-US', ['US']], ['en', ['US']], ['en-GB', ['GB', 'US']], ['zh-Hans-CN', ['US']], ['', ['US']]]) { setLang(lang); assert.deepStrictEqual(L.storefronts(), want, lang) }
+  })
+  setLang('id-ID')
+  const LINK = 'https://music.apple.com/id/album/x/4?i=4&uo=4'
+  const answer = (url) => ({ ok: true, json: async () => ({ url }) })
+  responder = () => answer(LINK)
   const A = T('Blinding Lights', 'The Weeknd', 'After Hours', UID)
-  await ok('first lookup hits the API once with the right query', async () => {
+  await ok('first lookup asks /api/apple once (never iTunes itself) with the item and storefronts; concurrent calls share it', async () => {
     assert.strictEqual(L.cachedApple(A), undefined)
-    const [a, b] = await Promise.all([L.resolveApple(A), L.resolveApple(A)]) // concurrent -> de-duplicated
-    assert.match(a, /\/4\?i=4/); assert.strictEqual(a, b)
-    assert.strictEqual(calls.length, 1)
-    const u = new URL(calls[0]); assert.strictEqual(u.origin + u.pathname, 'https://itunes.apple.com/search')
-    assert.deepStrictEqual([u.searchParams.get('term'), u.searchParams.get('entity'), u.searchParams.get('media')], ['Blinding Lights The Weeknd', 'song', 'music'])
+    const [a, b] = await Promise.all([L.resolveApple(A), L.resolveApple(A)])
+    assert.deepStrictEqual([a, b, calls.length], [LINK, LINK, 1])
+    const u = new URL(calls[0], 'http://app.test')
+    assert.ok(!calls[0].includes('itunes.apple.com')); assert.strictEqual(u.pathname, '/api/apple')
+    assert.deepStrictEqual(Object.fromEntries(u.searchParams), { kind: 'track', name: 'Blinding Lights', cc: 'ID,US', artist: 'The Weeknd', album: 'After Hours' })
   })
-  await ok('second lookup is served from the cache (no request) and persisted', async () => {
-    assert.match(await L.resolveApple(A), /\/4\?i=4/); assert.strictEqual(calls.length, 1)
-    await new Promise((r) => realST(r, 20)); assert.ok(JSON.parse(store['statsify.appleLinks'])['track|blinding lights|the weeknd|after hours'])
+  await ok('an album sends its artist, an artist only its name', async () => {
+    const c = calls.length
+    await L.resolveApple({ kind: 'album', name: 'After Hours', artist: 'The Weeknd', album: 'ignored' }); await L.resolveApple({ kind: 'artist', name: 'The Weeknd', artist: 'ignored', album: 'ignored' })
+    assert.deepStrictEqual(Object.fromEntries(new URL(calls[c], 'http://app.test').searchParams), { kind: 'album', name: 'After Hours', cc: 'ID,US', artist: 'The Weeknd' })
+    assert.deepStrictEqual(Object.fromEntries(new URL(calls[c + 1], 'http://app.test').searchParams), { kind: 'artist', name: 'The Weeknd', cc: 'ID,US' })
   })
-  await ok('"no match" is cached too, so a miss is not retried', async () => {
-    responder = () => ({ ok: true, json: async () => ({ results: [] }) })
+  await ok('second lookup comes from the cache with no request, is saved under the v2 key, and the old v1 key is dropped', async () => {
+    assert.strictEqual(await L.resolveApple(A), LINK); const c = calls.length
+    await new Promise((r) => realST(r, 20)); assert.ok(JSON.parse(store['statsify.appleLinks.v2'])['track|blinding lights|the weeknd|after hours'])
+    store['statsify.appleLinks'] = '{"old":["https://music.apple.com/x",1]}'
+    delete require.cache[require.resolve(OUT + '/listen.js')]; const L2 = require(OUT + '/listen.js') // a fresh page load
+    assert.strictEqual(L2.cachedApple(A), LINK); assert.ok(!('statsify.appleLinks' in store)); assert.strictEqual(calls.length, c)
+  })
+  await ok('"not on Apple Music" is cached too, so a miss is not asked again', async () => {
+    responder = () => answer('')
     const X = T('Obscure Song', 'Nobody'); assert.strictEqual(await L.resolveApple(X), ''); assert.strictEqual(L.cachedApple(X), ''); const c = calls.length
     assert.strictEqual(await L.resolveApple(X), ''); assert.strictEqual(calls.length, c)
   })
-  await ok('miss expires after 7 days, a hit after 30', async () => {
+  await ok('a miss expires after 7 days, a hit after 30', () => {
     const X = T('Obscure Song', 'Nobody'); skew = 6 * 864e5; assert.strictEqual(L.cachedApple(X), ''); skew = 8 * 864e5; assert.strictEqual(L.cachedApple(X), undefined)
     skew = 29 * 864e5; assert.ok(L.cachedApple(A)); skew = 31 * 864e5; assert.strictEqual(L.cachedApple(A), undefined); skew = 0
   })
-  await ok('HTTP 403 -> search fallback, nothing cached, lookups pause 60 s then resume', async () => {
-    responder = () => ({ ok: false, status: 403 })
+  await ok('a server error -> search fallback, nothing cached, lookups pause 30 s then resume', async () => {
+    responder = () => ({ ok: false, status: 502 })
     const B = T('Song B', 'Band B'), C = T('Song C', 'Band C'); const c = calls.length
     assert.strictEqual(await L.resolveApple(B), ''); assert.strictEqual(calls.length, c + 1); assert.strictEqual(L.cachedApple(B), undefined)
     assert.strictEqual(await L.resolveApple(C), ''); assert.strictEqual(calls.length, c + 1) // paused: no request
-    skew = 61000; responder = () => ({ ok: true, json: async () => ({ results: [song('Song C', 'Band C', 'X', 33)] }) })
+    skew = 31000; responder = () => answer('https://music.apple.com/id/album/y/33?i=33')
     assert.match(await L.resolveApple(C), /\/33\?/); assert.strictEqual(calls.length, c + 2); skew = 0
   })
   await ok('network error / bad JSON -> fallback, no throw', async () => {
@@ -105,6 +121,10 @@ const T = (name, artist, album, uri) => ({ kind: 'track', name, artist, album, u
     skew = 400000; responder = () => ({ ok: true, json: async () => { throw new SyntaxError('bad json') } })
     assert.strictEqual(await L.resolveApple(T('Song E', 'Band E')), ''); skew = 0
   })
-  await ok('empty name never calls the API', async () => { const c = calls.length; assert.strictEqual(await L.resolveApple(T('', 'x')), ''); assert.strictEqual(calls.length, c) })
+  await ok('a link that is not on an Apple host is refused, even from our own route', async () => {
+    skew = 600000; responder = () => answer('https://evil.example/song')
+    assert.strictEqual(await L.resolveApple(T('Song F', 'Band F')), ''); skew = 0
+  })
+  await ok('empty name never calls the route', async () => { const c = calls.length; assert.strictEqual(await L.resolveApple(T('', 'x')), ''); assert.strictEqual(calls.length, c) })
   console.log(`\nALL ${n} CHECKS PASSED`)
 })().catch((e) => { console.error('FAILED:', e); process.exit(1) })

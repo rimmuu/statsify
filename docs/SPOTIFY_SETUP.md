@@ -34,8 +34,7 @@ In the app's dashboard open **User Management** (Users and Access) and add the n
 ## 4. Connect
 Open **Settings > Spotify account > Connect Spotify**. Spotify shows what Statsify asks for and nothing else:
 - `user-top-read`: your top artists and tracks;
-- `user-read-recently-played`: your last 50 plays;
-- `user-read-private`: basic profile information used to show your connected Spotify account name and avatar. Spotify requires this scope for `GET /me`.
+- `user-read-recently-played`: your last 50 plays.
 
 You are sent back to Settings, the card shows **Connected**, and the first sync runs by itself (turn this off with *Sync automatically*). **Sync now** runs it any time.
 
@@ -55,7 +54,9 @@ You are sent back to Settings, the card shows **Connected**, and the first sync 
 | Anything on the server | nothing |
 
 ## Troubleshooting
-| You see | Cause and fix |
+For now the app shows one message for every Spotify problem: "Spotify, Coming soon, maybe 😭✌️". The table lists what can actually be behind it.
+
+| Situation | Cause and fix |
 |---|---|
 | "Spotify login isn't set up on this server yet" | A variable is missing or `SESSION_SECRET` is shorter than 32 characters. Fix it and redeploy. |
 | Spotify page says *INVALID_CLIENT: Invalid redirect URI* | `SPOTIFY_REDIRECT_URI` and the dashboard differ (https, host, path, a trailing slash). |

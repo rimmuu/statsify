@@ -1,9 +1,10 @@
 // Listening links for tracks, albums and artists. This module needs no API key and no Spotify login.
 //  - Spotify: an exact link only when a Spotify URI of the right type is known: the export carries track URIs, and the Spotify
 //    API (when connected) adds artist URIs. Everything else gets a Spotify search link instead. Nothing is ever invented.
-//  - Apple Music: the free iTunes Search API. A result is used only when title and artist (and album, when known) match;
-//    anything doubtful falls back to an Apple Music search link.
-// Lookups are cached in localStorage, run one at a time and are spaced out to stay under the API's rate limit.
+//  - Apple Music: the free iTunes Search API, asked through this app's own /api/apple route (a browser cannot call iTunes
+//    itself: it sends no CORS headers). A result is used only when title and artist (and album, when known) match; anything
+//    doubtful falls back to an Apple Music search link.
+// Lookups are cached in localStorage, run one at a time and are spaced out to stay under Apple's rate limit.
 import { norm } from './artistPhoto'
 
 export type ListenKind = 'track' | 'artist' | 'album'
@@ -75,12 +76,11 @@ export function pickApple(x: ListenItem, items: AppleItem[]): string {
 
 // ---- lookup, cache, rate limit -----------------------------------------------------------------------------------
 
-const KEY = 'statsify.appleLinks'
+const KEY = 'statsify.appleLinks.v2' // v2: entries from before the lookup worked are not trusted
 const HIT_MS = 30 * 864e5 // a found link is kept 30 days
 const MISS_MS = 7 * 864e5 // "no confident match" is kept 7 days
-const GAP_MS = 3000 // the iTunes Search API allows roughly 20 calls a minute
-const COOL_MS = 60000 // after any failure (rate limit, offline, timeout) lookups pause for a minute, nothing is cached
-const ENTITY: Record<ListenKind, string> = { track: 'song', album: 'album', artist: 'musicArtist' }
+const GAP_MS = 1000 // Apple allows roughly 20 searches a minute per address; answers are also cached for a month by the CDN
+const COOL_MS = 30000 // after any failure (Apple limiting us, offline, timeout) lookups pause for 30 s, nothing is cached
 
 type Entry = [string, number] // [url or '' for "no match", looked-up-at]
 let store: Record<string, Entry> | null = null
@@ -93,6 +93,7 @@ const pending = new Map<string, Promise<string>>()
 // shortcut: no size cap. Entries only appear for detail pages that were opened or icons that were pointed at.
 function load(): Record<string, Entry> {
   if (!store) {
+    try { localStorage.removeItem('statsify.appleLinks') } catch {} // the v1 cache
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || '{}')
       store = v && typeof v === 'object' ? v : {}
@@ -129,15 +130,29 @@ function enqueue<T>(job: () => Promise<T>): Promise<T> {
   return run
 }
 
+// The storefronts (country catalogues) to search, most likely first: the one for the device's region (en-ID or id -> ID), then
+// the US catalogue, which has the most. A direct link works in every storefront (Apple Music sends the listener to their own),
+// so this only decides where a song can be found: Indonesian releases are often missing from the US catalogue.
+export function storefronts(): string[] {
+  const lang = typeof navigator !== 'undefined' ? navigator.language || '' : ''
+  const region = /^[a-z]{2,3}[-_]([A-Za-z]{2})\b/.exec(lang)?.[1]?.toUpperCase() ?? (/^id\b/i.test(lang) ? 'ID' : 'US')
+  return region === 'US' ? ['US'] : [region, 'US']
+}
+
+// Asks this app's own /api/apple route, not iTunes: the iTunes Search API sends no CORS headers, so a browser cannot read its
+// answers. That is why the buttons never found a direct link and always fell back to a search link.
 async function lookup(x: ListenItem, k: string): Promise<string> {
   if (Date.now() < coolUntil) return ''
   const ctl = new AbortController()
-  const timeout = setTimeout(() => ctl.abort(), 8000)
+  const timeout = setTimeout(() => ctl.abort(), 12000)
   try {
-    const qs = new URLSearchParams({ term: query(x), media: 'music', entity: ENTITY[x.kind], limit: '15' }).toString()
-    const res = await fetch(`https://itunes.apple.com/search?${qs}`, { signal: ctl.signal })
+    const p = new URLSearchParams({ kind: x.kind, name: x.name, cc: storefronts().join(',') })
+    if (x.kind !== 'artist' && x.artist) p.set('artist', x.artist)
+    if (x.kind === 'track' && x.album) p.set('album', x.album)
+    const res = await fetch(`/api/apple?${p.toString()}`, { signal: ctl.signal })
     if (!res.ok) throw new Error(String(res.status))
-    const url = pickApple(x, (await res.json())?.results ?? [])
+    const j = await res.json()
+    const url = typeof j?.url === 'string' && APPLE.test(j.url) ? j.url : ''
     load()[k] = [url, Date.now()]
     save()
     return url
