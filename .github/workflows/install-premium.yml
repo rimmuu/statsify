@@ -1,5 +1,5 @@
 
-name: Install Statsify Premium
+name: Install Statsify Update
 
 on:
   workflow_dispatch:
@@ -14,17 +14,27 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract ZIP
+      - name: Extract uploaded ZIP
         run: |
-          unzip -q statsify-premium-upgrade-fixed.zip -d /tmp/statsify
-          cp -a /tmp/statsify/spotify-stats/. .
-          rm statsify-premium-upgrade-fixed.zip
+          ZIP="statsify-fix-apple-spotify.zip"
+          test -f "$ZIP" || exit 1
+          mkdir -p /tmp/statsify
+          unzip -q "$ZIP" -d /tmp/statsify
 
-      - name: Push changes
+          PROJECT_DIR="$(find /tmp/statsify -name package.json -type f -printf '%h\n' | head -n 1)"
+          test -n "$PROJECT_DIR" || exit 1
+
+          cp -a "$PROJECT_DIR"/. .
+          rm "$ZIP"
+
+      - name: Commit and push changes
         run: |
           git config user.name "rimmuu"
           git config user.email "20427697+rimmuu@users.noreply.github.com"
           git add -A
-          git commit -m "Install Statsify Premium Upgrade"
+          if git diff --cached --quiet; then
+            echo "No changes to commit."
+            exit 0
+          fi
+          git commit -m "Fix Apple Music and Spotify"
           git push
-
