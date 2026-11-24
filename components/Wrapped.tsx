@@ -1,5 +1,5 @@
 'use client'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { AnimatePresence, motion, motionValue, useMotionValue, usePresence, useReducedMotion, useSpring, useTransform, type MotionValue, type Variants } from 'framer-motion'
@@ -17,17 +17,6 @@ import { useNotice } from './Notice'
 const TOTAL = 7
 type Scope = 'all' | number
 
-// One palette per slide: [dark, vivid, glow rgb]. Colours cross-fade between slides through registered CSS properties
-// (a GPU-cheap CSS transition on the root; everything that moves uses Framer Motion).
-const PAL: { a: string; b: string; c: [number, number, number] }[] = [
-  { a: '#052e1c', b: '#0f7a47', c: [29, 185, 84] },
-  { a: '#1b1040', b: '#5b21b6', c: [168, 85, 247] },
-  { a: '#3b0a1d', b: '#be123c', c: [251, 113, 133] },
-  { a: '#082f49', b: '#0e7490', c: [34, 211, 238] },
-  { a: '#3a1d05', b: '#c2410c', c: [251, 191, 36] },
-  { a: '#04241f', b: '#0f766e', c: [163, 230, 53] },
-  { a: '#0a0a0a', b: '#4c1d95', c: [29, 185, 84] },
-]
 const ICON = { left: 'M15 5l-7 7 7 7', right: 'M9 5l7 7-7 7', close: 'M6 6l12 12M18 6L6 18', ok: 'M5 13l4 4L19 7', warn: 'M12 7v6M12 17h.01' }
 
 // Content entrance inside a slide: spread onto any motion element. `delay` is in seconds (cinematic level, a bit slower than the app).
@@ -81,7 +70,7 @@ function Intro({ d, years, scope, setScope, start }: { d: WrappedData; years: nu
       </div>
       {a && (
         <div className="wr-stack">
-          <div className="wr-deco"><div className="wr-glow" style={ambient(PAL[0].c.join(' '))} /></div>
+          <div className="wr-deco"><div className="wr-glow" style={ambient('145 137 137')} /></div>
           {c && <Parallax k={1.6} className="wr-pos-c"><Pop tilt={8} delay={0.3}><Art u={c.uri} name={c.name} cls="wr-cover-m" letter="wr-letter-s" /></Pop></Parallax>}
           {b && <Parallax k={1.3} className="wr-pos-b"><Pop tilt={-9} delay={0.2}><Art u={b.uri} name={b.name} cls="wr-cover-m" letter="wr-letter-s" /></Pop></Parallax>}
           <Parallax k={-1} className="wr-pos-a"><Pop float delay={0.1}><Art u={a.uri} name={a.name} cls="wr-cover-lg" letter="wr-letter-xl" /></Pop></Parallax>
@@ -138,7 +127,7 @@ function ArtistSlide({ d }: SP) {
       {a ? (
         <>
           <div className="wr-hero">
-            <div className="wr-deco"><div className="wr-glow" style={ambient(rgb || PAL[2].c.join(' '))} /></div>
+            <div className="wr-deco"><div className="wr-glow" style={ambient(rgb)} /></div>
             <Parallax k={-1}><Pop float><Art u={`artist:${a.name}`} name={a.name} cls="wr-cover-xl" letter="wr-letter-xl" /></Pop></Parallax>
           </div>
           <div>
@@ -194,7 +183,7 @@ function AlbumsSlide({ d }: SP) {
       {a ? (
         <>
           <div className="wr-stack">
-            <div className="wr-deco"><div className="wr-glow" style={ambient(rgb || PAL[4].c.join(' '))} /></div>
+            <div className="wr-deco"><div className="wr-glow" style={ambient(rgb)} /></div>
             {c && <Parallax k={1.6} className="wr-pos-c"><Pop tilt={8} delay={0.25}><Art u={c.uri} name={c.name} cls="wr-cover-m" letter="wr-letter-s" /></Pop></Parallax>}
             {b && <Parallax k={1.3} className="wr-pos-b"><Pop tilt={-9} delay={0.15}><Art u={b.uri} name={b.name} cls="wr-cover-m" letter="wr-letter-s" /></Pop></Parallax>}
             <Parallax k={-1} className="wr-pos-a"><Pop float><Art u={a.uri} name={a.name} cls="wr-cover-lg" letter="wr-letter-xl" /></Pop></Parallax>
@@ -380,7 +369,7 @@ export default function Wrapped() {
     ])
     const item = (r: Row | undefined, img: Img | undefined): Item | undefined => (r ? { name: r.name, sub: r.sub, ms: r.ms, plays: r.plays, img: img ?? null } : undefined)
     const spec: Spec = {
-      theme: 'purple', fmt: 'story', label: t('w.title'), range: `${date(d.lo)} – ${date(d.hi)}`, ms: d.ms, plays: d.plays,
+      theme: 'subtle', fmt: 'story', label: t('w.title'), range: `${date(d.lo)} – ${date(d.hi)}`, ms: d.ms, plays: d.plays,
       artist: item(d.artist, ai), album: item(d.topAlbums[0], bi), tracks: d.topTracks.map((r, i) => item(r, ti[i]) as Item), tx: cardLabels(t, hm),
     }
     const cv = document.createElement('canvas')
@@ -434,13 +423,10 @@ export default function Wrapped() {
     setBusy(false)
   }
 
-  const pal = PAL[idx]
-  const vars = { '--w1': pal.a, '--w2': pal.b, '--wr': pal.c[0], '--wg': pal.c[1], '--wb': pal.c[2] } as CSSProperties
-
-  if (!ready) return <div className="wr-root" style={vars}><p className="wr-status" role="status">{t('common.loading')}</p></div>
+  if (!ready) return <div className="wr-root"><p className="wr-status" role="status">{t('common.loading')}</p></div>
   if (!all.length) {
     return (
-      <div className="wr-root" style={vars}>
+      <div className="wr-root">
         <div className="wr-center">
           <motion.div className="wr-empty" initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: time.cine * 0.7, ease }}>
             <p className="wr-kicker">Wrapped</p>
@@ -467,12 +453,10 @@ export default function Wrapped() {
   }
 
   return (
-    <div className="wr-root" style={vars}>
+    <div className="wr-root">
       <div className="wr-center">
         <ParCtx.Provider value={par}>
           <div ref={stage} tabIndex={-1} role="region" aria-roledescription="story" aria-label={t('w.title')} className="wr-stage" onClick={tap} onPointerDown={down} onPointerUp={up} onPointerMove={move} onPointerLeave={leave}>
-            <Parallax k={-1.6} className="wr-bgpar"><motion.span className="wr-blob wr-blob-a" aria-hidden="true" animate={{ x: ['0%', '-6%', '0%'], y: ['0%', '5%', '0%'], scale: [1, 1.14, 1] }} transition={{ duration: 16, repeat: Infinity, ease: 'easeInOut' }} /></Parallax>
-            <Parallax k={2} className="wr-bgpar"><motion.span className="wr-blob wr-blob-b" aria-hidden="true" animate={{ x: ['0%', '6%', '0%'], y: ['0%', '-5%', '0%'], scale: [1, 1.14, 1] }} transition={{ duration: 21, repeat: Infinity, ease: 'easeInOut' }} /></Parallax>
             <header className="wr-top" data-notap>
               <div className="wr-progress" role="group" aria-label={t('w.slideOf', { n: idx + 1, total: TOTAL })}>
                 {titles.map((title, i) => (
@@ -482,7 +466,7 @@ export default function Wrapped() {
                 ))}
               </div>
               <div className="wr-bar">
-                <span className="wr-brand">● Statsify</span>
+                <span className="wr-brand">Statsify by Rimmuu</span>
                 <div className="wr-actions">
                   <motion.button type="button" className="wr-icon" aria-label={t('w.prev')} disabled={idx === 0} whileTap={idx === 0 ? undefined : { scale: 0.92 }} onClick={() => go(cur.current - 1)}><Icon d={ICON.left} /></motion.button>
                   <motion.button type="button" className="wr-icon" aria-label={t('w.next')} disabled={idx === TOTAL - 1} whileTap={idx === TOTAL - 1 ? undefined : { scale: 0.92 }} onClick={() => go(cur.current + 1)}><Icon d={ICON.right} /></motion.button>

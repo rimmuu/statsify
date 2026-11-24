@@ -32,7 +32,7 @@ export function useArtSrc(u: string): string {
   return src
 }
 
-// Dominant colour ("r g b") of an image, for ambient lighting. Needs a CORS-readable image; otherwise '' (default green glow).
+// Dominant colour ("r g b") of an image, for ambient lighting. Needs a CORS-readable image; otherwise '' (neutral background).
 const colors = new Map<string, string>()
 export function useAccent(src: string): string {
   const [c, setC] = useState('')
@@ -75,28 +75,22 @@ export const ambient = (rgb: string): CSSProperties | undefined => {
   return { '--ar': r, '--ag': g, '--ab': b } as CSSProperties
 }
 
-const hue = (s: string) => { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360; return h }
-
-// Rounded artwork: scales in once when it scrolls into view, crossfades from the initial tile when the image has loaded,
-// and zooms gently under a mouse (Framer ignores hover on touch screens). `cls` swaps in custom size/rounding classes.
-export default function Art({ u, name, big, fill, cls, letter }: { u: string; name: string; big?: boolean; fill?: boolean; cls?: string; letter?: string }) {
+// Only navigable covers carry a layoutId. The key clears the previous entity's
+// image immediately, including when a lookup is slow or returns no artwork.
+export default function Art(props: ArtProps) {
+  return <Artwork key={props.u + '/' + props.name} {...props} />
+}
+type ArtProps = { u: string; name: string; big?: boolean; fill?: boolean; cls?: string; letter?: string; sharedId?: string }
+function Artwork({ u, name, big, fill, cls, letter, sharedId }: ArtProps) {
   const src = useArtSrc(u)
-  const [ok, setOk] = useState(false)
-  const [bad, setBad] = useState(false)
-  useEffect(() => { setOk(false); setBad(false) }, [src])
-  const artist = u.startsWith('artist:')
-  const h = hue(name)
+  const [loaded, setLoaded] = useState('')
   const size = cls ?? (fill ? 'aspect-square w-full' : big ? 'h-24 w-24 sm:h-32 sm:w-32' : 'h-12 w-12')
-  const round = artist ? 'rounded-full' : cls ? '' : fill || big ? 'rounded-2xl' : 'rounded-xl'
   return (
-    <motion.div style={{ background: `linear-gradient(135deg, hsl(${h} 42% 30%), hsl(${(h + 40) % 360} 45% 16%))` }} data-shape={artist ? 'circle' : undefined}
-      initial={{ opacity: 0, scale: 0.92 }} whileInView={{ opacity: 1, scale: 1 }} viewport={{ once: true, margin: '60px' }} transition={{ duration: time.enter, ease }}
-      className={`art ${size} ${round} shadow-lg shadow-black/40 ring-1 ring-white/10`}>
+    <motion.div layoutId={sharedId} className={`art ${size}`} transition={{ duration: time.page, ease }}>
       <span aria-hidden className={`art-letter ${letter ?? (big || fill ? 'text-3xl' : 'text-base')}`}>{name.charAt(0)}</span>
-      {src && !bad && (
-        <motion.img src={src} alt="" loading="lazy" data-ok={ok ? '' : undefined} className="art-img" initial={{ opacity: 0 }} animate={{ opacity: ok ? 1 : 0 }} whileHover={{ scale: 1.07 }}
-          transition={{ duration: 0.5, ease }} onLoad={() => setOk(true)} onError={() => setBad(true)} />
-      )}
+      {src && <motion.img key={src} src={src} alt="" loading="lazy" decoding="async" className="art-img"
+        initial={{ opacity: 0 }} animate={{ opacity: loaded === src ? 1 : 0 }}
+        transition={{ duration: time.enter, ease }} onLoad={() => setLoaded(src)} onError={() => setLoaded('')} />}
     </motion.div>
   )
 }

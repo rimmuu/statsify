@@ -1,4 +1,5 @@
 'use client'
+import PageHeading from '@/components/PageHeading'
 import { useState } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -18,8 +19,8 @@ export default function Genres() {
   const has = hasTop(top)
   const rows = genreShares(artistsOf(top, range))
   return (
-    <div className="mx-auto max-w-2xl">
-      <h1 className="text-2xl font-semibold">{t('g.title')}</h1>
+    <div className="reading-width">
+      <PageHeading title={t('g.title')} />
       {has ? (
         <FadeIn delay={0.08}>
           <div className="card mt-6 space-y-4">
@@ -39,7 +40,7 @@ export default function Genres() {
                       <span className="shrink-0 tabular-nums text-neutral-400">{num(Math.round(g.pct))}%</span>
                     </div>
                     <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/5">
-                      <motion.div className="h-full origin-left rounded-full bg-spotify" initial={{ scaleX: 0 }} animate={{ scaleX: g.pct / 100 }} transition={{ duration: time.cine, delay: Math.min(i, 10) * 0.045, ease }} />
+                      <motion.div className="h-full origin-left rounded-full bg-neutral-400" initial={{ scaleX: 0 }} animate={{ scaleX: g.pct / 100 }} transition={{ duration: time.cine, delay: Math.min(i, 10) * 0.045, ease }} />
                     </div>
                   </li>
                 ))}
@@ -57,7 +58,7 @@ export default function Genres() {
             <p className="text-sm text-neutral-500">{t('g.foot')}</p>
             {status?.configured && !status.connected && (
               <p className="text-sm">
-                <Link href="/settings" className="text-spotify">{t('g.connect')}</Link>
+                <Link href="/settings" className="text-accent">{t('g.connect')}</Link>
               </p>
             )}
           </div>

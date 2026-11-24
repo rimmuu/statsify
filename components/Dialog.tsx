@@ -85,7 +85,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel, da
                 onClick={onConfirm}
                 whileTap={tapPress}
                 transition={{ duration: time.micro, ease }}
-                className={`min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium transition-colors ${danger ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25' : 'bg-spotify text-black'}`}
+                className={`min-h-[44px] rounded-lg px-4 py-2 text-sm font-medium transition-colors ${danger ? 'bg-red-500/15 text-red-400 hover:bg-red-500/25' : 'bg-accent text-black'}`}
               >
                 {confirmLabel}
               </motion.button>

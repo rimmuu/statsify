@@ -54,7 +54,7 @@ You are sent back to Settings, the card shows **Connected**, and the first sync 
 | Anything on the server | nothing |
 
 ## Troubleshooting
-For now the app shows one message for every Spotify problem: "Spotify, Coming soon, maybe 😭✌️". The table lists what can actually be behind it.
+Settings shows whether sign-in is unavailable, sign-in did not finish, or a sync failed. The table lists possible causes.
 
 | Situation | Cause and fix |
 |---|---|

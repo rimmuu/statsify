@@ -1,6 +1,7 @@
 'use client'
+import PageHeading from '@/components/PageHeading'
 import { useMemo, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useReducedMotion } from 'framer-motion'
 import { Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
@@ -8,7 +9,7 @@ import { group, keyOf, monthly, type Row } from '@/lib/stats'
 import { AnimatedButton, FadeIn } from '@/components/Motion'
 import { ease, spring, time } from '@/lib/motion'
 
-const COLORS = ['#1DB954', '#a78bfa']
+const COLORS = ['#F04458', '#b8b8bf']
 const sel = 'w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm transition-colors hover:border-white/20 sm:py-2'
 const METRICS: [K, (s: Row) => number, boolean][] = [
   ['s.events', (s) => s.plays, false],
@@ -17,6 +18,7 @@ const METRICS: [K, (s: Row) => number, boolean][] = [
 ]
 
 export default function Compare() {
+  const reduce = useReducedMotion()
   const { recs } = useData()
   const { t, num, hm } = useI18n()
   const [kind, setKind] = useState<'artist' | 'track'>('artist')
@@ -30,12 +32,12 @@ export default function Compare() {
   }, [recs, kind, sides[0]?.key, sides[1]?.key])
   const [s0, s1] = sides
   return (
-    <div className="mx-auto max-w-4xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t('cmp.title')}</h1>
-      <div className="flex gap-2">
+    <div className="space-y-6">
+      <PageHeading title={t('cmp.title')} period />
+      <div className="segments">
         {(['artist', 'track'] as const).map((k) => (
-          <AnimatedButton key={k} aria-pressed={kind === k} onClick={() => { setKind(k); setPick(['', '']) }} className={`relative rounded-full px-4 py-2 text-sm transition-colors ${kind === k ? 'text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
-            {kind === k && <motion.span layoutId="compare-pill" transition={spring} className="absolute inset-0 rounded-full bg-spotify shadow-[0_0_20px_-6px_rgba(29,185,84,0.55)]" />}
+          <AnimatedButton key={k} aria-pressed={kind === k} onClick={() => { setKind(k); setPick(['', '']) }} className={`relative rounded-lg px-4 py-2 text-sm transition-colors ${kind === k ? 'text-white' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
+            {kind === k && <motion.span layoutId="compare-pill" transition={spring} className="absolute inset-0 rounded-lg bg-neutral-600" />}
             <span className="relative z-10">{k === 'artist' ? t('cmp.artists') : t('cmp.tracks')}</span>
           </AnimatedButton>
         ))}
@@ -86,7 +88,7 @@ export default function Compare() {
                 <YAxis stroke="#737373" fontSize={11} tickLine={false} axisLine={false} width={36} />
                 <Tooltip contentStyle={{ background: '#171717', border: '1px solid #262626', borderRadius: 12 }} formatter={(v) => `${v} ${t('u.h')}`} />
                 <Legend />
-                {[s0, s1].map((s, i) => <Line key={i} isAnimationActive={false} type="monotone" dataKey={i ? 'b' : 'a'} name={s.name} stroke={COLORS[i]} strokeWidth={2} dot={false} />)}
+                {[s0, s1].map((s, i) => <Line key={i} isAnimationActive={!reduce} animationDuration={450} type="monotone" dataKey={i ? 'b' : 'a'} name={s.name} stroke={COLORS[i]} strokeWidth={2} dot={false} />)}
               </LineChart>
             </ResponsiveContainer>
           </div>

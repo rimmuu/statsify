@@ -1,4 +1,5 @@
 'use client'
+import PageHeading from '@/components/PageHeading'
 import { useMemo, useState } from 'react'
 import { useData } from '@/lib/store'
 import { useI18n } from '@/lib/i18n'
@@ -17,9 +18,9 @@ export default function History() {
     return [...list].sort((a, b) => b.ts - a.ts)
   }, [recs, q])
   return (
-    <div className="mx-auto max-w-3xl">
-      <h1 className="text-2xl font-semibold">{t('h.title')}</h1>
-      <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setN(100) }} aria-label={t('h.search')} placeholder={t('h.search')} className="mt-4 w-full rounded-xl border border-white/10 bg-neutral-900 px-4 py-3 text-sm outline-none transition-colors focus:border-spotify sm:py-2.5" />
+    <div className="history-page">
+      <PageHeading title={t('h.title')} period />
+      <input type="search" value={q} onChange={(e) => { setQ(e.target.value); setN(100) }} aria-label={t('h.search')} placeholder={t('h.search')} className="history-search" />
       <p className="mt-2 text-sm text-neutral-500">{t('h.count', { n: rows.length })}</p>
       {/* The first rows stagger in when the page (or period) loads; typing a search never re-animates the results. */}
       <ul key={period} className="mt-2 divide-y divide-white/5">

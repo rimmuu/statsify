@@ -24,7 +24,7 @@ export function Notice({ note }: { note: Note | null }) {
     <AnimatePresence>
       {note && (
         <motion.p key={note.id} role="status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: time.enter, ease }}
-          className={`flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${note.ok ? 'bg-spotify/10 text-spotify' : 'bg-red-500/10 text-red-400'}`}>
+          className={`flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${note.ok ? 'bg-accent/10 text-accent' : 'bg-red-500/10 text-red-400'}`}>
           <span aria-hidden>{note.ok ? '✓' : '!'}</span>
           <span>{note.t}</span>
         </motion.p>

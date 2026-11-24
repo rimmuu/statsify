@@ -3,7 +3,7 @@
 
 import type { K } from './i18n'
 
-export type Theme = 'dark' | 'purple' | 'neon' | 'minimal'
+export type Theme = 'subtle' | 'dark' | 'purple' | 'neon' | 'minimal'
 export type Fmt = 'story' | 'square'
 export type Img = HTMLImageElement | null
 export type Item = { name: string; sub: string; ms: number; plays: number; img: Img }
@@ -26,6 +26,13 @@ function halo(c: Ctx, x: number, y: number, r: number, rgb: string, a: number) {
 }
 
 export const THEMES: Record<Theme, { label: string; swatch: string; pal: Pal }> = {
+  subtle: {
+    label: 'Subtle Red', swatch: 'linear-gradient(90deg,#1c1c1c 92%,#f04458 92%)',
+    pal: {
+      ink: '#f5f5f5', dim: '#999999', accent: '#f04458', panel: '#1c1c1c', line: '#262626', glow: false,
+      bg: (c, w, h) => { c.fillStyle = '#0b0b0b'; c.fillRect(0, 0, w, h) },
+    },
+  },
   dark: {
     label: 'Dark', swatch: 'linear-gradient(135deg,#0a0a0a 55%,#1DB954)',
     pal: {
@@ -150,11 +157,11 @@ export function drawCard(cv: HTMLCanvasElement, s: Spec) {
   y += story ? 70 : 40
 
   if (story) {
-    if (s.artist) { block(c, p, s.tx, x0, y, inner, 210, s.tx.artist, s.artist, true, 54, 30); y += 238 }
+    if (s.artist) { block(c, p, s.tx, x0, y, inner, 210, s.tx.artist, s.artist, s.theme !== 'subtle', 54, 30); y += 238 }
     if (s.album) { block(c, p, s.tx, x0, y, inner, 160, s.tx.album, s.album, false, 40, 26); y += 188 }
   } else {
     const two = !!(s.artist && s.album), w2 = two ? (inner - 20) / 2 : inner
-    if (s.artist) block(c, p, s.tx, x0, y, w2, 132, s.tx.artist, s.artist, true, 30, 20, 76)
+    if (s.artist) block(c, p, s.tx, x0, y, w2, 132, s.tx.artist, s.artist, s.theme !== 'subtle', 30, 20, 76)
     if (s.album) block(c, p, s.tx, s.artist ? x0 + w2 + 20 : x0, y, w2, 132, s.tx.album, s.album, false, 30, 20, 76)
     if (s.artist || s.album) y += 158
   }

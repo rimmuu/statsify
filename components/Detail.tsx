@@ -4,10 +4,11 @@ import Link from 'next/link'
 import { useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
 import { dec, enc, group, keyOf, mmss, monthly } from '@/lib/stats'
+import { PeriodPicker } from './PageHeading'
 import Stat from './Stat'
 import Art, { ambient, useAccent, useArtSrc } from './Art'
 import HoursChart from './Chart'
-import { FadeIn, Reveal, ScrollParallax, StaggerContainer } from './Motion'
+import { FadeIn, Reveal, StaggerContainer } from './Motion'
 import ListenLinks from './ListenLinks'
 import { useSpotify } from '@/lib/spotify/provider'
 import { artistUri } from '@/lib/spotify/store'
@@ -42,21 +43,23 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
   const rgb = useAccent(useArtSrc(art))
   if (!ready) return null
   const back = `/${kind}s`
-  if (!h) return <p className="text-neutral-400">{t('d.nf')} <Link href={back} className="text-spotify">{t(`d.nfBack.${kind}` as K)}</Link></p>
+  if (!h) return <p className="text-neutral-400">{t('d.nf')} <Link href={back} className="text-accent">{t(`d.nfBack.${kind}` as K)}</Link></p>
   const day = (ts: number) => (isFinite(ts) && ts > 0 ? date(ts) : '–')
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <Link href={back} className="inline-block py-1 text-sm text-neutral-400 transition-colors hover:text-white">{t(`d.back.${kind}` as K)}</Link>
       <FadeIn><div className="amb rounded-3xl p-4 sm:p-6" style={ambient(rgb)}>
         <div className="flex items-center gap-4 sm:gap-6">
-          {kind === 'artist' ? <ScrollParallax className="shrink-0"><Art big u={art} name={h.a} /></ScrollParallax> : <Art big u={art} name={h.t} />}
+          {kind === 'artist' ? <Art sharedId={`${kind}/${key}`} big u={art} name={h.a} /> : <Art sharedId={`${kind}/${key}`} big u={art} name={h.t} />}
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-semibold sm:text-3xl">{kind === 'track' ? h.t : h.a}</h1>
+            {kind === 'artist' && <p className="secondary">{t('n.plays', { n: d.mine.length })}</p>}
             {kind === 'track' && <p className="truncate text-neutral-300">{h.a}{h.al ? ` · ${h.al}` : ''}</p>}
           </div>
         </div>
         <ListenLinks className="mt-4" item={{ kind, name: kind === 'track' ? h.t : h.a, artist: h.a, album: h.al, uri: kind === 'artist' ? artistUri(spTop, h.a) : h.u }} />
       </div></FadeIn>
+      <PeriodPicker />
       <StaggerContainer className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Stat l={t('s.events')} n={d.mine.length} fmt={num} />
         <Stat l={t('s.streams')} n={d.streams} fmt={num} />
@@ -71,7 +74,7 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
           <List title={t('d.topTracks')}>
             {d.tracks.slice(0, 10).map((r, i) => (
               <div key={r.key} className="flex flex-wrap items-center gap-x-3">
-                <Link href={`/tracks/${enc(r.key)}`} className="flex min-w-0 basis-full justify-between gap-3 py-2 transition-colors hover:text-spotify sm:basis-0 sm:flex-1">
+                <Link href={`/tracks/${enc(r.key)}`} className="flex min-w-0 basis-full justify-between gap-3 py-2 transition-colors hover:text-accent sm:basis-0 sm:flex-1">
                   <span className="truncate">{i + 1}. {r.name}</span>
                   <span className="shrink-0 text-sm text-neutral-400">{hm(r.ms)} · {t('n.plays', { n: r.plays })}</span>
                 </Link>

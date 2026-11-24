@@ -1,4 +1,5 @@
 'use client'
+import PageHeading from '@/components/PageHeading'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useData } from '@/lib/store'
@@ -16,7 +17,7 @@ const FMTS: Fmt[] = ['story', 'square']
 const iso = (ts: number) => { const d = new Date(ts); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}` }
 const toItem = (r: Row | undefined, img: Img | undefined): Item | undefined => (r ? { name: r.name, sub: r.sub, ms: r.ms, plays: r.plays, img: img ?? null } : undefined)
 const btn = 'inline-flex min-h-[48px] flex-1 items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50'
-const field = 'w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm outline-none transition-colors focus:border-spotify [color-scheme:dark]'
+const field = 'w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm outline-none transition-colors focus:border-accent [color-scheme:dark]'
 
 const Spin = () => <span aria-hidden className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
 function Group({ label, children }: { label: string; children: ReactNode }) {
@@ -30,8 +31,8 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
 // Pill whose highlight slides to the selected one (shared layout animation, one layoutId per group).
 function Pill({ on, group: g, onClick, children }: { on: boolean; group: string; onClick: () => void; children: ReactNode }) {
   return (
-    <AnimatedButton aria-pressed={on} onClick={onClick} className={`relative min-h-[40px] rounded-full px-3.5 py-2 text-sm transition-colors ${on ? 'font-semibold text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
-      {on && <motion.span layoutId={`pill-${g}`} transition={spring} className="absolute inset-0 rounded-full bg-spotify shadow-[0_0_20px_-6px_rgba(29,185,84,0.55)]" />}
+    <AnimatedButton aria-pressed={on} onClick={onClick} className={`relative min-h-[40px] rounded-full px-3.5 py-2 text-sm transition-colors ${on ? 'font-semibold text-white' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
+      {on && <motion.span layoutId={`pill-${g}`} transition={spring} className="absolute inset-0 rounded-lg bg-neutral-600" />}
       <span className="relative z-10">{children}</span>
     </AnimatedButton>
   )
@@ -41,7 +42,7 @@ export default function Share() {
   const { all } = useData()
   const { t, hm, date } = useI18n()
   const [per, setPer] = useState<Per>('month')
-  const [theme, setTheme] = useState<Theme>('dark')
+  const [theme, setTheme] = useState<Theme>('subtle')
   const [fmt, setFmt] = useState<Fmt>('story')
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
@@ -153,13 +154,13 @@ export default function Share() {
   const preparing = !!spec && !blob
   return (
     <div className="mx-auto max-w-5xl">
-      <h1 className="text-2xl font-semibold">{t('sh.title')}</h1>
+      <PageHeading title={t('sh.title')} />
       <p className="mt-1 text-sm text-neutral-400">{t('sh.sub')}</p>
       <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_340px]">
-        <section className="flex min-h-[240px] items-start justify-center">
+        <section className="flex preview-stage min-h-[240px] items-start justify-center">
           {spec ? (
             <motion.div className="w-full" initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: blob ? 1 : 0.55, scale: 1 }} transition={{ duration: time.enter, ease }}>
-              <canvas ref={cv} width={1080} height={fmt === 'story' ? 1920 : 1080} aria-label={t('sh.preview')} className="mx-auto block h-auto max-h-[72vh] w-auto max-w-full rounded-2xl shadow-2xl shadow-black/50 ring-1 ring-white/10" />
+              <canvas ref={cv} width={1080} height={fmt === 'story' ? 1920 : 1080} aria-label={t('sh.preview')} className="mx-auto block h-auto max-h-[72vh] w-auto max-w-full rounded-lg" />
             </motion.div>
           ) : (
             <FadeIn className="w-full"><div className="card text-center text-neutral-400">{t('sh.empty')}</div></FadeIn>
@@ -188,7 +189,7 @@ export default function Share() {
                   <AnimatedButton key={k} aria-pressed={theme === k} onClick={() => setTheme(k)} className="relative overflow-hidden rounded-xl text-left ring-1 ring-white/10 transition-shadow hover:ring-white/25">
                     <span className="block h-11" style={{ background: THEMES[k].swatch }} />
                     <span className="block bg-neutral-900 px-3 py-2 text-xs">{t(`th.${k}` as K)}</span>
-                    {theme === k && <motion.span layoutId="theme-ring" transition={spring} className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-spotify shadow-[0_0_20px_-6px_rgba(29,185,84,0.55)]" />}
+                    {theme === k && <motion.span layoutId="theme-ring" transition={spring} className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-accent" />}
                   </AnimatedButton>
                 ))}
               </div>
@@ -200,7 +201,7 @@ export default function Share() {
             </Group>
           </div>
           <div className="flex gap-2">
-            <AnimatedButton onClick={download} disabled={!blob} className={`${btn} bg-spotify text-black hover:brightness-110`}>{preparing && <Spin />}{preparing ? t('sh.preparing') : t('sh.download')}</AnimatedButton>
+            <AnimatedButton onClick={download} disabled={!blob} className={`${btn} bg-accent text-black hover:brightness-110`}>{preparing && <Spin />}{preparing ? t('sh.preparing') : t('sh.download')}</AnimatedButton>
             <AnimatedButton onClick={share} disabled={!blob || busy} className={`${btn} bg-white/10 text-white hover:bg-white/15`}>{(preparing || busy) && <Spin />}{t('sh.share')}</AnimatedButton>
           </div>
           <Notice note={note} />

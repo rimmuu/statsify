@@ -1,10 +1,9 @@
 'use client'
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ease, time } from '@/lib/motion'
 import { AnimatedButton } from './Motion'
 
-let uid = 0
 
 // Select-only combobox: animated popover (AnimatePresence handles the exit), keyboard (arrows, Enter, Escape),
 // closes on outside click. Focus stays on the button.
@@ -12,7 +11,7 @@ export default function Dropdown<V extends string | number>({ value, options, on
   const [open, setOpen] = useState(false)
   const [cur, setCur] = useState(0)
   const box = useRef<HTMLDivElement>(null)
-  const id = useRef(`dd${++uid}`)
+  const id = useId()
   const at = Math.max(0, options.findIndex((o) => o.v === value))
 
   const show = () => { setCur(at); setOpen(true) }
@@ -36,7 +35,7 @@ export default function Dropdown<V extends string | number>({ value, options, on
   }
   return (
     <div ref={box} className="relative">
-      <AnimatedButton role="combobox" aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={id.current} aria-activedescendant={open ? `${id.current}-${cur}` : undefined}
+      <AnimatedButton role="combobox" aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={id} aria-activedescendant={open ? `${id}-${cur}` : undefined}
         onClick={() => (open ? setOpen(false) : show())} onKeyDown={key}
         className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-neutral-900 px-3 py-2 text-sm transition-colors hover:border-white/20 sm:min-h-0">
         <span className="truncate">{options[at]?.l}</span>
@@ -46,12 +45,12 @@ export default function Dropdown<V extends string | number>({ value, options, on
       </AnimatedButton>
       <AnimatePresence>
         {open && (
-          <motion.ul key="menu" id={id.current} role="listbox" aria-label={label}
+          <motion.ul key="menu" id={id} role="listbox" aria-label={label}
             initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: time.micro, ease }} style={{ transformOrigin: 'top right' }}
             className="absolute right-0 z-30 mt-2 min-w-full overflow-hidden rounded-xl border border-white/10 bg-neutral-900/95 p-1 shadow-2xl shadow-black/60 backdrop-blur">
             {options.map((o, i) => (
-              <li key={String(o.v)} id={`${id.current}-${i}`} role="option" aria-selected={o.v === value} onMouseEnter={() => setCur(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => choose(i)}
-                className={`cursor-pointer whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${i === cur ? 'bg-white/10 text-white' : 'text-neutral-300'} ${o.v === value ? 'font-semibold text-spotify' : ''}`}>
+              <li key={String(o.v)} id={`${id}-${i}`} role="option" aria-selected={o.v === value} onMouseEnter={() => setCur(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => choose(i)}
+                className={`cursor-pointer whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${i === cur ? 'bg-white/10 text-white' : 'text-neutral-300'} ${o.v === value ? 'font-semibold text-accent' : ''}`}>
                 {o.l}
               </li>
             ))}

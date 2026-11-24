@@ -128,7 +128,7 @@ export function ScrollParallax({ children, className = '', offset = 14 }: { chil
 // Accessible on/off switch; the knob slides with a shared-layout spring.
 export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (on: boolean) => void; label: string }) {
   return (
-    <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-spotify' : 'bg-neutral-700'}`}>
+    <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-accent' : 'bg-neutral-700'}`}>
       <motion.span layout transition={spring} className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow ${checked ? 'right-1' : 'left-1'}`} />
     </button>
   )

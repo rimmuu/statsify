@@ -12,17 +12,16 @@ export default function RangeTabs({ value, onChange, id }: { value: Range; onCha
   const { t } = useI18n()
   return (
     <LayoutGroup id={id}>
-      <div role="tablist" className="inline-flex rounded-full bg-white/5 p-1 text-sm">
+      <div role="group" aria-label={t('per.label')} className="segments">
         {RANGES.map((r) => (
           <button
             key={r}
             type="button"
-            role="tab"
-            aria-selected={value === r}
+            aria-pressed={value === r}
             onClick={() => onChange(r)}
-            className={`relative min-h-[40px] rounded-full px-3 py-1.5 transition-colors ${value === r ? 'text-black' : 'text-neutral-300 hover:text-white'}`}
+            className={`relative min-h-[40px] rounded-full px-3 py-1.5 transition-colors ${value === r ? 'text-white' : 'text-neutral-300 hover:text-white'}`}
           >
-            {value === r && <motion.span layoutId="range-pill" transition={spring} className="absolute inset-0 rounded-full bg-spotify" />}
+            {value === r && <motion.span layoutId="range-pill" transition={spring} className="absolute inset-0 rounded-lg bg-neutral-600" />}
             <span className="relative z-10">{t(RANGE_KEY[r])}</span>
           </button>
         ))}

@@ -1,4 +1,5 @@
 'use client'
+import PageHeading from '@/components/PageHeading'
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { useData } from '@/lib/store'
@@ -55,28 +56,10 @@ export default function Settings() {
   }
   const fromApi = all.reduce((n, r) => n + (r.src === 'api' ? 1 : 0), 0)
   return (
-    <div className="mx-auto max-w-xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t('set.title')}</h1>
-      <FadeIn>
-        <SpotifyAccount />
-      </FadeIn>
-      <FadeIn delay={0.04}>
-        <div className="card">
-          <div className="font-medium">{t('set.lang')}</div>
-          <p className="mt-1 text-sm text-neutral-400">{t('set.langHelp')}</p>
-          <div role="radiogroup" aria-label={t('set.lang')} className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
-            {LANGS.map(([k, flag, name]) => (
-              <AnimatedButton key={k} role="radio" aria-checked={lang === k} onClick={() => setLang(k)} className={`relative flex min-h-[44px] items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm transition-colors ${lang === k ? 'text-white' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
-                {lang === k && <motion.span layoutId="lang-ring" transition={spring} className="absolute inset-0 rounded-xl bg-spotify/15 ring-1 ring-spotify shadow-[0_0_20px_-6px_rgba(29,185,84,0.55)]" />}
-                <span aria-hidden className="relative z-10 text-xl">{flag}</span>
-                <span className="relative z-10 font-medium">{name}</span>
-              </AnimatedButton>
-            ))}
-          </div>
-        </div>
-      </FadeIn>
+    <div className="reading-width settings space-y-5">
+      <PageHeading title={t('set.title')} />
       <FadeIn delay={0.06}>
-        <motion.label className="card lift block cursor-pointer text-center" whileHover={hoverLift} whileTap={tapCard} transition={{ duration: time.micro, ease }}>
+        <motion.label id="import" className="import-panel card block cursor-pointer" whileHover={hoverLift} whileTap={tapCard} transition={{ duration: time.micro, ease }}>
           <input
             type="file"
             multiple
@@ -95,7 +78,7 @@ export default function Settings() {
       </FadeIn>
       {(prog || err) && (
         <motion.div {...enter}>
-          <div className="h-2 overflow-hidden rounded bg-neutral-800"><motion.div className="h-full origin-left bg-spotify" initial={false} animate={{ scaleX: prog?.p ?? 0 }} transition={{ duration: time.enter, ease }} /></div>
+          <div className="h-2 overflow-hidden rounded bg-neutral-800"><motion.div className="h-full origin-left bg-accent" initial={false} animate={{ scaleX: prog?.p ?? 0 }} transition={{ duration: time.enter, ease }} /></div>
           <p className={`mt-2 text-sm ${err ? 'text-red-400' : 'text-neutral-400'}`}>{err ? t('set.failed', { e: err }) : prog?.name ? t('set.reading', { name: prog.name, i: prog.i, n: prog.n }) : t('set.done')}</p>
         </motion.div>
       )}
@@ -106,6 +89,24 @@ export default function Settings() {
           {res.bad > 0 && ` ${t('set.bad', { n: res.bad })}`}
         </motion.div>
       )}
+      <FadeIn>
+        <SpotifyAccount />
+      </FadeIn>
+      <FadeIn delay={0.04}>
+        <div className="card">
+          <div className="font-medium">{t('set.lang')}</div>
+          <p className="mt-1 text-sm text-neutral-400">{t('set.langHelp')}</p>
+          <div role="radiogroup" aria-label={t('set.lang')} className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {LANGS.map(([k, flag, name]) => (
+              <AnimatedButton key={k} role="radio" aria-checked={lang === k} onClick={() => setLang(k)} className={`relative flex min-h-[44px] items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm transition-colors ${lang === k ? 'text-white' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
+                {lang === k && <motion.span layoutId="lang-ring" transition={spring} className="absolute inset-0 rounded-xl bg-neutral-700" />}
+                <span aria-hidden className="relative z-10 text-xl">{flag}</span>
+                <span className="relative z-10 font-medium">{name}</span>
+              </AnimatedButton>
+            ))}
+          </div>
+        </div>
+      </FadeIn>
       <FadeIn delay={0.12}>
         <motion.label className="card lift flex cursor-pointer items-center justify-between gap-4" whileHover={hoverLift} whileTap={tapCard} transition={{ duration: time.micro, ease }}>
           <span>
