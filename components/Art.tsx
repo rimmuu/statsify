@@ -1,35 +1,23 @@
 'use client'
-import { useEffect, useState, type CSSProperties } from 'react'
-import { motion } from 'framer-motion'
-import { artistPhoto } from '@/lib/artistPhoto'
-import { apiArt } from '@/lib/apiArt'
-import { ease, time } from '@/lib/motion'
+import { memo, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { artistPhoto, spotifyImage } from '@/lib/artistPhoto'
+import { trackThumb } from '@/lib/apiArt'
+import { useArtistCredits } from '@/lib/store'
 
-const cache = new Map<string, string>()
-
-// Artwork source. Tracks/albums: Spotify's keyless oEmbed. Artists ('artist:Name'): Wikipedia photo, only on a verified match.
-// Returns '' when there is none (letter tile is shown instead). Nothing is ever invented.
-export function useArtSrc(u: string): string {
-  const [src, setSrc] = useState('')
+export function useArtSrc(u: string, name = '', supplied = ''): string {
+  const credits = useArtistCredits()
+  const credit = u.startsWith('artist:') ? credits.get(u.slice(7)) : undefined
+  const [result, setResult] = useState<{ key: string; credit: typeof credit; url: string }>()
+  const direct = /^spotify:artist:[A-Za-z0-9]{22}$/.test(u) && spotifyImage(supplied) ? supplied : ''
   useEffect(() => {
-    let off = false
-    if (u.startsWith('artist:')) {
-      setSrc('')
-      artistPhoto(u.slice(7)).then((p) => { if (!off) setSrc(p) })
-      return () => { off = true }
-    }
-    if (!u.startsWith('spotify:track:')) { setSrc(''); return }
-    const hit = cache.get(u)
-    if (hit !== undefined) { setSrc(hit); return }
-    const known = apiArt(u) // artwork that came with a Spotify API response
-    if (known) { cache.set(u, known); setSrc(known); return }
-    fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(u.replace('spotify:track:', 'https://open.spotify.com/track/')))
-      .then((r) => r.json())
-      .then((j) => { cache.set(u, j.thumbnail_url || ''); if (!off) setSrc(j.thumbnail_url || '') })
-      .catch(() => { cache.set(u, '') })
-    return () => { off = true }
-  }, [u])
-  return src
+    if (!u || direct) return
+    let active = true
+    const job = u.startsWith('artist:') ? artistPhoto(credit)
+      : u.startsWith('spotify:artist:') ? artistPhoto({ name, artistUri: u }) : trackThumb(u)
+    job.then(url => { if (active) setResult({ key: u, credit, url }) })
+    return () => { active = false }
+  }, [u, credit, direct, name])
+  return direct || (result?.key === u && result.credit === credit ? result.url : '')
 }
 
 // Dominant colour ("r g b") of an image, for ambient lighting. Needs a CORS-readable image; otherwise '' (neutral background).
@@ -75,22 +63,34 @@ export const ambient = (rgb: string): CSSProperties | undefined => {
   return { '--ar': r, '--ag': g, '--ab': b } as CSSProperties
 }
 
-// Only navigable covers carry a layoutId. The key clears the previous entity's
-// image immediately, including when a lookup is slow or returns no artwork.
-export default function Art(props: ArtProps) {
-  return <Artwork key={props.u + '/' + props.name} {...props} />
+// One observer schedules metadata work for nearby covers. Scrolling does not
+// run animations or read row geometry in JavaScript.
+const waiting = new WeakMap<Element, () => void>()
+let observer: IntersectionObserver | undefined
+function observeArt(element: Element, load: () => void) {
+  if (!('IntersectionObserver' in window)) { load(); return }
+  observer ??= new IntersectionObserver(entries => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue
+      observer?.unobserve(entry.target)
+      waiting.get(entry.target)?.()
+      waiting.delete(entry.target)
+    }
+  }, { rootMargin: '100px' })
+  waiting.set(element, load)
+  observer.observe(element)
+  return () => { observer?.unobserve(element); waiting.delete(element) }
 }
-type ArtProps = { u: string; name: string; big?: boolean; fill?: boolean; cls?: string; letter?: string; sharedId?: string }
-function Artwork({ u, name, big, fill, cls, letter, sharedId }: ArtProps) {
-  const src = useArtSrc(u)
-  const [loaded, setLoaded] = useState('')
+
+type ArtProps = { u: string; name: string; big?: boolean; fill?: boolean; cls?: string; letter?: string; image?: string }
+export default memo(function Art({ u, name, big, fill, cls, letter, image }: ArtProps) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [near, setNear] = useState(false)
+  useEffect(() => { if (ref.current) return observeArt(ref.current, () => setNear(true)) }, [])
+  const src = useArtSrc(near ? u : '', name, image)
   const size = cls ?? (fill ? 'aspect-square w-full' : big ? 'h-24 w-24 sm:h-32 sm:w-32' : 'h-12 w-12')
-  return (
-    <motion.div layoutId={sharedId} className={`art ${size}`} transition={{ duration: time.page, ease }}>
-      <span aria-hidden className={`art-letter ${letter ?? (big || fill ? 'text-3xl' : 'text-base')}`}>{name.charAt(0)}</span>
-      {src && <motion.img key={src} src={src} alt="" loading="lazy" decoding="async" className="art-img"
-        initial={{ opacity: 0 }} animate={{ opacity: loaded === src ? 1 : 0 }}
-        transition={{ duration: time.enter, ease }} onLoad={() => setLoaded(src)} onError={() => setLoaded('')} />}
-    </motion.div>
-  )
-}
+  return <div className={`art ${size}`} ref={ref}>
+    <span aria-hidden className={`art-letter ${letter ?? (big || fill ? 'text-3xl' : 'text-base')}`}>{name.charAt(0)}</span>
+    {src && <img key={src} src={src} alt="" loading="lazy" decoding="async" className="art-img" onError={e => { e.currentTarget.hidden = true }} />}
+  </div>
+})

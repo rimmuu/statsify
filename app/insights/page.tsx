@@ -6,7 +6,7 @@ import { useI18n, type K } from '@/lib/i18n'
 import { activity } from '@/lib/stats'
 import Stat from '@/components/Stat'
 import HoursChart from '@/components/Chart'
-import { Reveal, StaggerContainer } from '@/components/Motion'
+import { StaggerContainer } from '@/components/Motion'
 
 type B = { k: string | number; h: number }
 const hrs = (a: B[]) => a.map((x) => ({ ...x, h: +(x.h / 3.6e6).toFixed(1) }))
@@ -31,8 +31,8 @@ export default function Insights() {
         <Stat l={t('i.active')} n={d.active} fmt={num} />
       </StaggerContainer>
       <div className="insight-charts">
-        <Reveal><div className="card"><h2 className="mb-4 font-medium">{t('i.byHour')}</h2><HoursChart data={d.H} /></div></Reveal>
-        <Reveal><div className="card"><h2 className="mb-4 font-medium">{t('i.byWeek')}</h2><HoursChart data={d.W} /></div></Reveal>
+        <div className="card"><h2 className="mb-4 font-medium">{t('i.byHour')}</h2><HoursChart data={d.H} /></div>
+        <div className="card"><h2 className="mb-4 font-medium">{t('i.byWeek')}</h2><HoursChart data={d.W} /></div>
       </div>
     </div>
   )

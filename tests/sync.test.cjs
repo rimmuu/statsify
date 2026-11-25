@@ -43,7 +43,7 @@ const mkDeps = (over = {}, plays = [play(0), play(600, U2)]) => {
     const top = ST.loadTop(); assert.deepStrictEqual([top.at, ST.tracksOf(top, 'long_term')[0].name, ST.artistsOf(top, 'short_term')[0].genres], [NOW, 'Top long_term', ['pop']])
     assert.strictEqual(AA.apiArt(U1), 'https://i.scdn.co/image/cover1')
     assert.strictEqual(AA.apiArt('spotify:track:CCCCCCCCCCCCCCCCCCCCCC'), 'https://i.scdn.co/image/top-long_term')
-    assert.strictEqual(await AP.artistPhoto('Artist X'), 'https://i.scdn.co/image/artist-long_term'); assert.strictEqual(fetchCalls, 0) // served from the seeded cache, no Wikipedia call
+    assert.strictEqual(await AP.artistPhoto({ name: 'Artist X', artistUri: artist('long_term').uri }), 'https://i.scdn.co/image/artist-long_term'); assert.strictEqual(fetchCalls, 0)
   })
   await ok('syncing again with the same data is harmless: nothing duplicated', async () => {
     wipe(); const { deps, db } = mkDeps(); await SY.runSync(deps); const before = JSON.stringify(db)
@@ -103,11 +103,11 @@ const mkDeps = (over = {}, plays = [play(0), play(600, U2)]) => {
     assert.deepStrictEqual([AA.apiArt('spotify:track:T0'), AA.apiArt('spotify:track:T49'), AA.apiArt('spotify:track:T50'), AA.apiArt('spotify:track:T649')], ['', '', 'https://i.scdn.co/50', 'https://i.scdn.co/649'])
     assert.strictEqual(Object.keys(JSON.parse(mem['statsify.apiArt'])).length, 600)
   })
-  await ok('artist photos from the API replace "not found" and Wikipedia guesses; non-https and empty are ignored', async () => {
-    wipe(); mem['statsify.artistPhotos'] = JSON.stringify({ 'artist y': '', 'artist z': 'https://upload.wikimedia.org/z.jpg' })
-    AP.clearPhotoCache(); mem['statsify.artistPhotos'] = JSON.stringify({ 'artist y': '', 'artist z': 'https://upload.wikimedia.org/z.jpg' }); 
-    AP.seedArtistPhotos([['Artist Y', 'https://i.scdn.co/y'], ['Artist Z', 'https://i.scdn.co/z'], ['Artist Q', 'http://i.scdn.co/q'], ['', 'https://i.scdn.co/e'], ['Artist W', '']])
-    assert.deepStrictEqual([await AP.artistPhoto('artist y'), await AP.artistPhoto('Artist Z'), fetchCalls], ['https://i.scdn.co/y', 'https://i.scdn.co/z', 0])
+  await ok('verified Spotify artist IDs retrieve synced portraits; name-only history cannot use them', async () => {
+    wipe(); AP.clearPhotoCache()
+    const a = artist('short_term')
+    AP.seedArtistPhotos([a, { ...a, image: 'http://i.scdn.co/q' }, { ...a, image: 'https://example.org/q' }, { ...a, image: '' }])
+    assert.deepStrictEqual([await AP.artistPhoto({ name: a.name, artistUri: a.uri }), await AP.artistPhoto({ name: a.name }), fetchCalls], [a.image, '', 0])
   })
   await ok('artist URIs: exact name only, from any range; otherwise nothing', () => {
     const top = { at: 1, tracks: {}, artists: { long_term: [artist('long_term'), { ...artist('x'), name: 'Other', uri: 'spotify:artist:ZZZZZZZZZZZZZZZZZZZZZZ' }] } }

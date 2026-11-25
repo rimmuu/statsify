@@ -6,6 +6,7 @@ import { Provider, useData } from '@/lib/store'
 import { SpotifyProvider } from '@/lib/spotify/provider'
 import { I18nProvider, useI18n, type K } from '@/lib/i18n'
 import { MotionRoot, PageSkeleton, PageTransition } from './Motion'
+import { AppleLinkProvider } from './AppleLinkDialog'
 import { Icon, Tabs } from './Navigation'
 import PageHeading from './PageHeading'
 
@@ -45,5 +46,5 @@ function Inner({ children }: { children: ReactNode }) {
   </div>
 }
 export default function Shell({ children }: { children: ReactNode }) {
-  return <I18nProvider><Provider><SpotifyProvider><MotionRoot><Inner>{children}</Inner></MotionRoot></SpotifyProvider></Provider></I18nProvider>
+  return <I18nProvider><Provider><SpotifyProvider><MotionRoot><AppleLinkProvider><Inner>{children}</Inner></AppleLinkProvider></MotionRoot></SpotifyProvider></Provider></I18nProvider>
 }

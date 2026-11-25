@@ -63,7 +63,7 @@ export default function Overview() {
           <h2 className="section-title">{t('ov.highlights')}</h2>
           {([['track', 's.topTrack', d.t], ['artist', 's.topArtist', d.a], ['album', 's.topAlbum', d.l]] as const).map(([kind, label, row]) => (
             <div key={kind} className="highlight">
-              {row && <Art u={kind === 'artist' ? `artist:${row.name}` : row.uri} name={row.name} sharedId={kind !== 'album' ? `${kind}/${row.key}` : undefined} />}
+              {row && <Art u={kind === 'artist' ? `artist:${row.name}` : row.uri} name={row.name} />}
               <div className="min-w-0">
                 <p className="caption">{t(label)}</p>
                 {row ? <Link className="highlight-name" href={kind === 'album' ? '/albums' : `/${kind}s/${enc(row.key)}`}>{row.name}</Link> : <span>–</span>}

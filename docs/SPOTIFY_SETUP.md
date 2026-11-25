@@ -58,7 +58,7 @@ Settings shows whether sign-in is unavailable, sign-in did not finish, or a sync
 
 | Situation | Cause and fix |
 |---|---|
-| "Spotify login isn't set up on this server yet" | A variable is missing or `SESSION_SECRET` is shorter than 32 characters. Fix it and redeploy. |
+| “Coming soon, maybe 😭✌️” | A variable is missing or `SESSION_SECRET` is shorter than 32 characters. Fix it and redeploy. |
 | Spotify page says *INVALID_CLIENT: Invalid redirect URI* | `SPOTIFY_REDIRECT_URI` and the dashboard differ (https, host, path, a trailing slash). |
 | "This Spotify account isn't allowed for this app" | Add the account under User Management; the app owner also needs Premium. |
 | "The login couldn't be verified" / "took too long" | Cookies are blocked, the login was started in another browser, or it took more than 10 minutes. Try again in one browser. |

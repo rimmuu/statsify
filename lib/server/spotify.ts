@@ -114,9 +114,11 @@ export function normalizeTrack(t: any): ApiTrack | null {
   const uri = str(t?.uri)
   if (!uri.startsWith('spotify:track:') || t?.is_local) return null
   const name = str(t.name)
-  const artist = str(t.album?.artists?.[0]?.name) || str(t.artists?.[0]?.name)
+  const credit = t.album?.artists?.[0]?.name ? t.album.artists[0] : t.artists?.[0]
+  const artist = str(credit?.name)
+  const artistUri = str(credit?.uri)
   if (!name || !artist) return null
-  return { id: str(t.id), uri, name, artist, album: str(t.album?.name), image: pickImage(t.album?.images), ms: Number.isFinite(t.duration_ms) && t.duration_ms > 0 ? t.duration_ms : 0 }
+  return { id: str(t.id), uri, name, artist, ...(/^spotify:artist:[A-Za-z0-9]{22}$/.test(artistUri) ? { artistUri } : {}), album: str(t.album?.name), image: pickImage(t.album?.images), ms: Number.isFinite(t.duration_ms) && t.duration_ms > 0 ? t.duration_ms : 0 }
 }
 
 export function normalizeArtist(a: any): ApiArtist | null {

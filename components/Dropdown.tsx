@@ -37,7 +37,7 @@ export default function Dropdown<V extends string | number>({ value, options, on
     <div ref={box} className="relative">
       <AnimatedButton role="combobox" aria-label={label} aria-haspopup="listbox" aria-expanded={open} aria-controls={id} aria-activedescendant={open ? `${id}-${cur}` : undefined}
         onClick={() => (open ? setOpen(false) : show())} onKeyDown={key}
-        className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-neutral-900 px-3 py-2 text-sm transition-colors hover:border-white/20 sm:min-h-0">
+        className="flex min-h-[44px] items-center gap-2 rounded-full bg-neutral-900 px-4 py-2 text-sm transition-colors hover:border-white/20 sm:min-h-0">
         <span className="truncate">{options[at]?.l}</span>
         <motion.svg aria-hidden viewBox="0 0 20 20" className="h-4 w-4 shrink-0 text-neutral-400" animate={{ rotate: open ? 180 : 0 }} transition={{ duration: time.micro, ease }}>
           <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
@@ -47,7 +47,7 @@ export default function Dropdown<V extends string | number>({ value, options, on
         {open && (
           <motion.ul key="menu" id={id} role="listbox" aria-label={label}
             initial={{ opacity: 0, y: -6, scale: 0.97 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -6, scale: 0.97 }} transition={{ duration: time.micro, ease }} style={{ transformOrigin: 'top right' }}
-            className="absolute right-0 z-30 mt-2 min-w-full overflow-hidden rounded-xl border border-white/10 bg-neutral-900/95 p-1 shadow-2xl shadow-black/60 backdrop-blur">
+            className="absolute right-0 z-30 mt-2 min-w-full overflow-hidden rounded-xl border border-white/10 bg-neutral-900 p-1">
             {options.map((o, i) => (
               <li key={String(o.v)} id={`${id}-${i}`} role="option" aria-selected={o.v === value} onMouseEnter={() => setCur(i)} onMouseDown={(e) => e.preventDefault()} onClick={() => choose(i)}
                 className={`cursor-pointer whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${i === cur ? 'bg-white/10 text-white' : 'text-neutral-300'} ${o.v === value ? 'font-semibold text-accent' : ''}`}>

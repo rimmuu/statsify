@@ -103,9 +103,9 @@ function rr(c: Ctx, x: number, y: number, w: number, h: number, r: number) {
 }
 
 // Cover-fit square picture; a letter tile when there is no artwork (never invented).
-function pic(c: Ctx, p: Pal, img: Img, x: number, y: number, s: number, r: number, name: string, circle = false) {
+function pic(c: Ctx, p: Pal, img: Img, x: number, y: number, s: number, r: number, name: string) {
   c.save()
-  if (circle) { c.beginPath(); c.arc(x + s / 2, y + s / 2, s / 2, 0, Math.PI * 2) } else rr(c, x, y, s, s, r)
+  rr(c, x, y, s, s, r)
   c.clip()
   if (img && img.naturalWidth) {
     const m = Math.min(img.naturalWidth, img.naturalHeight)
@@ -118,7 +118,7 @@ function pic(c: Ctx, p: Pal, img: Img, x: number, y: number, s: number, r: numbe
   c.restore()
 }
 
-function block(c: Ctx, p: Pal, lb: Labels, x: number, y: number, w: number, h: number, label: string, it: Item, circle: boolean, ns: number, ss: number, a = h - 40) {
+function block(c: Ctx, p: Pal, lb: Labels, x: number, y: number, w: number, h: number, label: string, it: Item, ns: number, ss: number, a = h - 40) {
   rr(c, x, y, w, h, 28)
   c.fillStyle = p.panel
   c.fill()
@@ -128,7 +128,7 @@ function block(c: Ctx, p: Pal, lb: Labels, x: number, y: number, w: number, h: n
   c.stroke()
   c.shadowBlur = 0
   const tx = x + 20 + a + 24, tw = x + w - 24 - tx
-  pic(c, p, it.img, x + 20, y + (h - a) / 2, a, 18, it.name, circle)
+  pic(c, p, it.img, x + 20, y + (h - a) / 2, a, 18, it.name)
   txt(c, label, tx, y + h * 0.28, { size: 20, weight: 700, color: p.dim, spacing: '3px' })
   txt(c, it.name, tx, y + h * 0.28 + ns + 8, { size: ns, weight: 800, color: p.ink, max: tw })
   txt(c, `${it.ms < 6e4 ? lb.tiny : lb.time(it.ms)} · ${lb.plays(it.plays)}`, tx, y + h * 0.28 + ns + ss + 20, { size: ss, color: p.dim, max: tw })
@@ -157,12 +157,12 @@ export function drawCard(cv: HTMLCanvasElement, s: Spec) {
   y += story ? 70 : 40
 
   if (story) {
-    if (s.artist) { block(c, p, s.tx, x0, y, inner, 210, s.tx.artist, s.artist, s.theme !== 'subtle', 54, 30); y += 238 }
-    if (s.album) { block(c, p, s.tx, x0, y, inner, 160, s.tx.album, s.album, false, 40, 26); y += 188 }
+    if (s.artist) { block(c, p, s.tx, x0, y, inner, 210, s.tx.artist, s.artist, 54, 30); y += 238 }
+    if (s.album) { block(c, p, s.tx, x0, y, inner, 160, s.tx.album, s.album, 40, 26); y += 188 }
   } else {
     const two = !!(s.artist && s.album), w2 = two ? (inner - 20) / 2 : inner
-    if (s.artist) block(c, p, s.tx, x0, y, w2, 132, s.tx.artist, s.artist, s.theme !== 'subtle', 30, 20, 76)
-    if (s.album) block(c, p, s.tx, s.artist ? x0 + w2 + 20 : x0, y, w2, 132, s.tx.album, s.album, false, 30, 20, 76)
+    if (s.artist) block(c, p, s.tx, x0, y, w2, 132, s.tx.artist, s.artist, 30, 20, 76)
+    if (s.album) block(c, p, s.tx, s.artist ? x0 + w2 + 20 : x0, y, w2, 132, s.tx.album, s.album, 30, 20, 76)
     if (s.artist || s.album) y += 158
   }
 
@@ -172,7 +172,7 @@ export function drawCard(cv: HTMLCanvasElement, s: Spec) {
   s.tracks.forEach((t, i) => {
     const ry = y + i * rh, a = rh - 20
     txt(c, String(i + 1), x0 + 26, ry + rh * 0.6, { size: story ? 38 : 28, weight: 800, color: p.accent, align: 'center', glow })
-    pic(c, p, t.img, x0 + 64, ry + 10, a, 14, t.name, false)
+    pic(c, p, t.img, x0 + 64, ry + 10, a, 14, t.name)
     const tx = x0 + 64 + a + 22, rs = story ? 28 : 21, right = t.ms < 6e4 ? s.tx.tiny : s.tx.time(t.ms)
     c.font = `600 ${rs}px ${FONT}`
     ;(c as unknown as { letterSpacing: string }).letterSpacing = '0px'
@@ -204,21 +204,8 @@ export function loadImg(url: string): Promise<Img> {
   return p
 }
 
-const thumbs = new Map<string, Promise<string>>()
-export function trackThumb(uri: string): Promise<string> {
-  if (!uri.startsWith('spotify:track:')) return Promise.resolve('')
-  let p = thumbs.get(uri)
-  if (!p) {
-    p = fetch('https://open.spotify.com/oembed?url=' + encodeURIComponent(uri.replace('spotify:track:', 'https://open.spotify.com/track/')))
-      .then((r) => r.json())
-      .then((j) => (typeof j?.thumbnail_url === 'string' ? j.thumbnail_url : ''))
-      .catch(() => '')
-    thumbs.set(uri, p)
-  }
-  return p
-}
+export { trackThumb } from './apiArt'
 
-// Localized card text, shared by the Share page and the Wrapped story. Names of artists/tracks/albums are never passed through here.
 export const cardLabels = (t: (k: K, v?: Record<string, string | number>) => string, hm: (ms: number) => string): Labels => ({
   total: t('ov.total').toUpperCase(), artist: t('s.topArtist').toUpperCase(), album: t('s.topAlbum').toUpperCase(), tracks: t('tl.title.track').toUpperCase(),
   time: hm, plays: (n) => t('n.plays', { n }), tiny: t('u.lt1'),

@@ -31,10 +31,10 @@ export const dueForAutoSync = (meta: store.Meta | null, now: number) => !meta ||
 // Artwork and artist photos that came with the API are kept, so lists and detail pages can show them straight away.
 function remember(top: store.TopStore) {
   const art: [string, string][] = []
-  const photos: [string, string][] = []
+  const photos: ApiArtist[] = []
   for (const r of RANGES) {
     for (const t of store.tracksOf(top, r)) art.push([t.uri, t.image])
-    for (const a of store.artistsOf(top, r)) photos.push([a.name, a.image])
+    for (const a of store.artistsOf(top, r)) photos.push(a)
   }
   rememberArt(art)
   seedArtistPhotos(photos)

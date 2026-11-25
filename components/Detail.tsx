@@ -8,7 +8,7 @@ import { PeriodPicker } from './PageHeading'
 import Stat from './Stat'
 import Art, { ambient, useAccent, useArtSrc } from './Art'
 import HoursChart from './Chart'
-import { FadeIn, Reveal, StaggerContainer } from './Motion'
+import { FadeIn, StaggerContainer } from './Motion'
 import ListenLinks from './ListenLinks'
 import { useSpotify } from '@/lib/spotify/provider'
 import { artistUri } from '@/lib/spotify/store'
@@ -50,7 +50,7 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
       <Link href={back} className="inline-block py-1 text-sm text-neutral-400 transition-colors hover:text-white">{t(`d.back.${kind}` as K)}</Link>
       <FadeIn><div className="amb rounded-3xl p-4 sm:p-6" style={ambient(rgb)}>
         <div className="flex items-center gap-4 sm:gap-6">
-          {kind === 'artist' ? <Art sharedId={`${kind}/${key}`} big u={art} name={h.a} /> : <Art sharedId={`${kind}/${key}`} big u={art} name={h.t} />}
+          <Art big u={art} name={kind === 'artist' ? h.a : h.t} />
           <div className="min-w-0">
             <h1 className="truncate text-2xl font-semibold sm:text-3xl">{kind === 'track' ? h.t : h.a}</h1>
             {kind === 'artist' && <p className="secondary">{t('n.plays', { n: d.mine.length })}</p>}
@@ -68,7 +68,7 @@ export default function Detail({ kind, id }: { kind: 'track' | 'artist'; id: str
         <Stat l={t('d.first')} v={day(d.first)} s={t('d.allTime')} />
         <Stat l={t('d.last')} v={day(d.last)} s={t('d.allTime')} />
       </StaggerContainer>
-      <Reveal><div className="card"><h2 className="mb-4 font-medium">{t('ov.perMonth')}</h2><HoursChart data={d.months} /></div></Reveal>
+      <div className="card"><h2 className="mb-4 font-medium">{t('ov.perMonth')}</h2><HoursChart data={d.months} /></div>
       {kind === 'artist' && (
         <>
           <List title={t('d.topTracks')}>

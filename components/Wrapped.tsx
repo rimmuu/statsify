@@ -1,9 +1,9 @@
 'use client'
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as RMouseEvent, type PointerEvent as RPointerEvent, type ReactNode } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { AnimatePresence, motion, motionValue, useMotionValue, usePresence, useReducedMotion, useSpring, useTransform, type MotionValue, type Variants } from 'framer-motion'
-import { useData } from '@/lib/store'
+import { AnimatePresence, motion, usePresence, type Variants } from 'framer-motion'
+import { useArtistCredits, useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
 import { buildWrapped, inYear, yearsIn, type WrappedData } from '@/lib/wrapped'
 import { artistPhoto } from '@/lib/artistPhoto'
@@ -33,26 +33,6 @@ function Icon({ d }: { d: string }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d={d} /></svg>
 }
 
-// Pointer parallax: the stage feeds two spring-smoothed motion values; each layer reads them with its own depth.
-// No React state is involved, so moving the mouse never re-renders the story.
-const zero = motionValue(0)
-const ParCtx = createContext<{ x: MotionValue<number>; y: MotionValue<number> }>({ x: zero, y: zero })
-function Parallax({ k, className, children }: { k: number; className?: string; children?: ReactNode }) {
-  const p = useContext(ParCtx)
-  const x = useTransform(p.x, (v) => v * k * 18)
-  const y = useTransform(p.y, (v) => v * k * 18)
-  return <motion.div className={className} style={{ x, y }}>{children}</motion.div>
-}
-
-// Artwork entrance (+ optional slow float). With reduced motion Framer drops the transforms and only fades.
-function Pop({ children, tilt = 0, float = false, delay = 0 }: { children: ReactNode; tilt?: number; float?: boolean; delay?: number }) {
-  return (
-    <motion.div initial={{ opacity: 0, scale: 0.82, rotate: tilt - 4 }} animate={{ opacity: 1, scale: 1, rotate: tilt }} transition={{ duration: time.cine, delay, ease }}>
-      {float ? <motion.div animate={{ y: [0, -10, 0], rotate: [-1.5, 1.5, -1.5] }} transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut' }}>{children}</motion.div> : children}
-    </motion.div>
-  )
-}
-
 type SP = { d: WrappedData }
 
 function Intro({ d, years, scope, setScope, start }: { d: WrappedData; years: number[]; scope: Scope; setScope: (s: Scope) => void; start: () => void }) {
@@ -71,9 +51,9 @@ function Intro({ d, years, scope, setScope, start }: { d: WrappedData; years: nu
       {a && (
         <div className="wr-stack">
           <div className="wr-deco"><div className="wr-glow" style={ambient('145 137 137')} /></div>
-          {c && <Parallax k={1.6} className="wr-pos-c"><Pop tilt={8} delay={0.3}><Art u={c.uri} name={c.name} cls="wr-cover-m" letter="wr-letter-s" /></Pop></Parallax>}
-          {b && <Parallax k={1.3} className="wr-pos-b"><Pop tilt={-9} delay={0.2}><Art u={b.uri} name={b.name} cls="wr-cover-m" letter="wr-letter-s" /></Pop></Parallax>}
-          <Parallax k={-1} className="wr-pos-a"><Pop float delay={0.1}><Art u={a.uri} name={a.name} cls="wr-cover-lg" letter="wr-letter-xl" /></Pop></Parallax>
+          {c && <div className="wr-pos-c"><Art u={c.uri} name={c.name} cls="wr-cover-m" letter="wr-letter-s" /></div>}
+          {b && <div className="wr-pos-b"><Art u={b.uri} name={b.name} cls="wr-cover-m" letter="wr-letter-s" /></div>}
+          <div className="wr-pos-a"><Art u={a.uri} name={a.name} cls="wr-cover-lg" letter="wr-letter-xl" /></div>
         </div>
       )}
       <div className="wr-foot">
@@ -128,7 +108,7 @@ function ArtistSlide({ d }: SP) {
         <>
           <div className="wr-hero">
             <div className="wr-deco"><div className="wr-glow" style={ambient(rgb)} /></div>
-            <Parallax k={-1}><Pop float><Art u={`artist:${a.name}`} name={a.name} cls="wr-cover-xl" letter="wr-letter-xl" /></Pop></Parallax>
+            <div><Art u={`artist:${a.name}`} name={a.name} cls="wr-cover-xl" letter="wr-letter-xl" /></div>
           </div>
           <div>
             <motion.p className="wr-lead" {...rise(0.2)}>{t('w.artist.lead')}</motion.p>
@@ -184,9 +164,9 @@ function AlbumsSlide({ d }: SP) {
         <>
           <div className="wr-stack">
             <div className="wr-deco"><div className="wr-glow" style={ambient(rgb)} /></div>
-            {c && <Parallax k={1.6} className="wr-pos-c"><Pop tilt={8} delay={0.25}><Art u={c.uri} name={c.name} cls="wr-cover-m" letter="wr-letter-s" /></Pop></Parallax>}
-            {b && <Parallax k={1.3} className="wr-pos-b"><Pop tilt={-9} delay={0.15}><Art u={b.uri} name={b.name} cls="wr-cover-m" letter="wr-letter-s" /></Pop></Parallax>}
-            <Parallax k={-1} className="wr-pos-a"><Pop float><Art u={a.uri} name={a.name} cls="wr-cover-lg" letter="wr-letter-xl" /></Pop></Parallax>
+            {c && <div className="wr-pos-c"><Art u={c.uri} name={c.name} cls="wr-cover-m" letter="wr-letter-s" /></div>}
+            {b && <div className="wr-pos-b"><Art u={b.uri} name={b.name} cls="wr-cover-m" letter="wr-letter-s" /></div>}
+            <div className="wr-pos-a"><Art u={a.uri} name={a.name} cls="wr-cover-lg" letter="wr-letter-xl" /></div>
           </div>
           <div>
             <motion.p className="wr-album" {...rise(0.25)}>{a.name}</motion.p>
@@ -282,10 +262,10 @@ function Slide({ children, dir }: { children: ReactNode; dir: number }) {
 }
 
 export default function Wrapped() {
+  const credits = useArtistCredits()
   const { all, ready } = useData()
   const { t, hm, date, lang } = useI18n()
   const router = useRouter()
-  const reduce = useReducedMotion()
   const [scope, setScope] = useState<Scope>('all')
   const [idx, setIdx] = useState(0)
   const [dir, setDir] = useState<1 | -1>(1)
@@ -297,10 +277,6 @@ export default function Wrapped() {
   const stage = useRef<HTMLDivElement>(null)
   const swipe = useRef({ x: 0, y: 0, block: false })
   const made = useRef<{ key: string; blob: Blob } | null>(null)
-  const px = useMotionValue(0), py = useMotionValue(0)
-  const sx = useSpring(px, { stiffness: 90, damping: 18 }), sy = useSpring(py, { stiffness: 90, damping: 18 })
-  const par = useMemo(() => ({ x: sx, y: sy }), [sx, sy])
-
   const years = useMemo(() => yearsIn(all), [all])
   const list = useMemo(() => (scope === 'all' ? all : inYear(all, scope)), [all, scope])
   const d = useMemo(() => buildWrapped(list), [list])
@@ -349,21 +325,13 @@ export default function Wrapped() {
     const r = e.currentTarget.getBoundingClientRect()
     go(cur.current + (e.clientX - r.left < r.width * 0.3 ? -1 : 1))
   }
-  const move = (e: RPointerEvent<HTMLDivElement>) => {
-    if (e.pointerType !== 'mouse' || reduce) return
-    const r = e.currentTarget.getBoundingClientRect()
-    px.set((e.clientX - r.left) / r.width - 0.5)
-    py.set((e.clientY - r.top) / r.height - 0.5)
-  }
-  const leave = () => { px.set(0); py.set(0) }
-
   // Share image: the same card as the Share page (story format), made on this device from the stats above and exported as drawn.
   const makeBlob = async (): Promise<Blob | null> => {
     const key = `${scope}|${lang}|${d.plays}|${d.ms}`
     if (made.current && made.current.key === key) return made.current.blob
     const pic = async (url: Promise<string>): Promise<Img> => loadImg(await url)
     const [ai, bi, ...ti] = await Promise.all([
-      d.artist ? pic(artistPhoto(d.artist.name)) : null,
+      d.artist ? pic(artistPhoto(credits.get(d.artist.name))) : null,
       d.topAlbums[0] ? pic(trackThumb(d.topAlbums[0].uri)) : null,
       ...d.topTracks.map((r) => pic(trackThumb(r.uri))),
     ])
@@ -455,53 +423,51 @@ export default function Wrapped() {
   return (
     <div className="wr-root">
       <div className="wr-center">
-        <ParCtx.Provider value={par}>
-          <div ref={stage} tabIndex={-1} role="region" aria-roledescription="story" aria-label={t('w.title')} className="wr-stage" onClick={tap} onPointerDown={down} onPointerUp={up} onPointerMove={move} onPointerLeave={leave}>
-            <header className="wr-top" data-notap>
-              <div className="wr-progress" role="group" aria-label={t('w.slideOf', { n: idx + 1, total: TOTAL })}>
-                {titles.map((title, i) => (
-                  <button key={i} type="button" className="wr-seg" data-done={i <= idx ? '' : undefined} aria-current={i === idx ? 'step' : undefined} aria-label={t('w.goto', { n: i + 1, title })} onClick={() => go(i)}>
-                    <i><motion.b initial={false} animate={{ scaleX: i <= idx ? 1 : 0 }} transition={{ duration: 0.5, ease }} style={{ originX: 0 }} /></i>
-                  </button>
-                ))}
-              </div>
-              <div className="wr-bar">
-                <span className="wr-brand">Statsify by Rimmuu</span>
-                <div className="wr-actions">
-                  <motion.button type="button" className="wr-icon" aria-label={t('w.prev')} disabled={idx === 0} whileTap={idx === 0 ? undefined : { scale: 0.92 }} onClick={() => go(cur.current - 1)}><Icon d={ICON.left} /></motion.button>
-                  <motion.button type="button" className="wr-icon" aria-label={t('w.next')} disabled={idx === TOTAL - 1} whileTap={idx === TOTAL - 1 ? undefined : { scale: 0.92 }} onClick={() => go(cur.current + 1)}><Icon d={ICON.right} /></motion.button>
-                  <motion.div whileTap={{ scale: 0.92 }}><Link href="/" className="wr-icon" aria-label={t('w.close')}><Icon d={ICON.close} /></Link></motion.div>
-                </div>
-              </div>
-            </header>
-            <div className="wr-slides">
-              <AnimatePresence initial={false} custom={dir}>
-                <Slide key={idx} dir={dir}>{slide(idx)}</Slide>
-              </AnimatePresence>
+        <div ref={stage} tabIndex={-1} role="region" aria-roledescription="story" aria-label={t('w.title')} className="wr-stage" onClick={tap} onPointerDown={down} onPointerUp={up}>
+          <header className="wr-top" data-notap>
+            <div className="wr-progress" role="group" aria-label={t('w.slideOf', { n: idx + 1, total: TOTAL })}>
+              {titles.map((title, i) => (
+                <button key={i} type="button" className="wr-seg" data-done={i <= idx ? '' : undefined} aria-current={i === idx ? 'step' : undefined} aria-label={t('w.goto', { n: i + 1, title })} onClick={() => go(i)}>
+                  <i><motion.b initial={false} animate={{ scaleX: i <= idx ? 1 : 0 }} transition={{ duration: 0.5, ease }} style={{ originX: 0 }} /></i>
+                </button>
+              ))}
             </div>
-            <AnimatePresence>
-              {sheet && <motion.div key="scrim" className="wr-scrim" data-notap onClick={() => setSheet(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: time.micro }} />}
-              {sheet && (
-                <motion.div key="sheet" className="wr-sheet" role="dialog" aria-label={t('w.sheet')} data-notap initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }} transition={{ duration: time.cine * 0.45, ease }}>
-                  <p className="wr-sheet-title">{t('w.sheet')}</p>
-                  <div className="wr-sheet-btns">
-                    <motion.button type="button" className="wr-btn wr-btn-primary" autoFocus whileTap={busy ? undefined : tapPress} onClick={saveImage} disabled={busy}>{busy && <span className="wr-spin" aria-hidden="true" />}{t('w.download')}</motion.button>
-                    <motion.button type="button" className="wr-btn wr-btn-ghost" whileTap={tapPress} onClick={copyLink}>{t('w.copy')}</motion.button>
-                  </div>
-                  <p className="wr-small">{t('w.privacy')}</p>
-                </motion.div>
-              )}
+            <div className="wr-bar">
+              <span className="wr-brand">Statsify by Rimmuu</span>
+              <div className="wr-actions">
+                <motion.button type="button" className="wr-icon" aria-label={t('w.prev')} disabled={idx === 0} whileTap={idx === 0 ? undefined : { scale: 0.92 }} onClick={() => go(cur.current - 1)}><Icon d={ICON.left} /></motion.button>
+                <motion.button type="button" className="wr-icon" aria-label={t('w.next')} disabled={idx === TOTAL - 1} whileTap={idx === TOTAL - 1 ? undefined : { scale: 0.92 }} onClick={() => go(cur.current + 1)}><Icon d={ICON.right} /></motion.button>
+                <motion.div whileTap={{ scale: 0.92 }}><Link href="/" className="wr-icon" aria-label={t('w.close')}><Icon d={ICON.close} /></Link></motion.div>
+              </div>
+            </div>
+          </header>
+          <div className="wr-slides">
+            <AnimatePresence initial={false} custom={dir}>
+              <Slide key={idx} dir={dir}>{slide(idx)}</Slide>
             </AnimatePresence>
-            <AnimatePresence>
-              {note && (
-                <motion.p key={note.id} role="status" className="wr-toast" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ duration: time.enter, ease }}>
-                  <Icon d={note.ok ? ICON.ok : ICON.warn} />{note.t}
-                </motion.p>
-              )}
-            </AnimatePresence>
-            <p className="wr-sr" role="status" aria-live="polite">{t('w.slideOf', { n: idx + 1, total: TOTAL })}: {titles[idx]}</p>
           </div>
-        </ParCtx.Provider>
+          <AnimatePresence>
+            {sheet && <motion.div key="scrim" className="wr-scrim" data-notap onClick={() => setSheet(false)} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: time.micro }} />}
+            {sheet && (
+              <motion.div key="sheet" className="wr-sheet" role="dialog" aria-label={t('w.sheet')} data-notap initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 40 }} transition={{ duration: time.cine * 0.45, ease }}>
+                <p className="wr-sheet-title">{t('w.sheet')}</p>
+                <div className="wr-sheet-btns">
+                  <motion.button type="button" className="wr-btn wr-btn-primary" autoFocus whileTap={busy ? undefined : tapPress} onClick={saveImage} disabled={busy}>{busy && <span className="wr-spin" aria-hidden="true" />}{t('w.download')}</motion.button>
+                  <motion.button type="button" className="wr-btn wr-btn-ghost" whileTap={tapPress} onClick={copyLink}>{t('w.copy')}</motion.button>
+                </div>
+                <p className="wr-small">{t('w.privacy')}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <AnimatePresence>
+            {note && (
+              <motion.p key={note.id} role="status" className="wr-toast" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }} transition={{ duration: time.enter, ease }}>
+                <Icon d={note.ok ? ICON.ok : ICON.warn} />{note.t}
+              </motion.p>
+            )}
+          </AnimatePresence>
+          <p className="wr-sr" role="status" aria-live="polite">{t('w.slideOf', { n: idx + 1, total: TOTAL })}: {titles[idx]}</p>
+        </div>
       </div>
     </div>
   )

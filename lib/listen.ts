@@ -4,8 +4,10 @@
 //  - Apple Music: the free iTunes Search API, asked through this app's own /api/apple route (a browser cannot call iTunes
 //    itself: it sends no CORS headers). A result is used only when title and artist (and album, when known) match; anything
 //    doubtful falls back to an Apple Music search link.
-// Lookups are cached in localStorage, run one at a time and are spaced out to stay under Apple's rate limit.
-import { norm } from './artistPhoto'
+// Cache per storefront. Album taps bypass queued background lookups.
+import { catalogName, matchedAlbum, storefronts, type AppleItem } from './catalog'
+export type { AppleItem } from './catalog'
+export { storefronts } from './catalog'
 
 export type ListenKind = 'track' | 'artist' | 'album'
 // `uri` is a Spotify URI. It only counts when its type matches `kind` (track, album, artist): on an artist or album row of the
@@ -21,14 +23,13 @@ export function spotifyUrl(x: ListenItem): { url: string; exact: boolean } {
   return { url: `https://open.spotify.com/search/${encodeURIComponent(query(x))}`, exact: false }
 }
 
-export const appleSearchUrl = (x: ListenItem) => `https://music.apple.com/us/search?term=${encodeURIComponent(query(x))}`
+export const appleSearchUrl = (x: ListenItem) => `https://music.apple.com/${storefronts()[0].toLowerCase()}/search?term=${encodeURIComponent(query(x))}`
 
 // ---- matching ----------------------------------------------------------------------------------------------------
 
-export type AppleItem = { artistName?: string; trackName?: string; collectionName?: string; trackViewUrl?: string; collectionViewUrl?: string; artistLinkUrl?: string }
 const APPLE = /^https:\/\/(music|itunes)\.apple\.com\//
 
-const n = (s: string) => norm(s.replace(/&/g, ' and '))
+const n = (s: string) => catalogName(s).replace(/[^\p{L}\p{N}]+/gu, ' ').trim()
 // Words that make a different recording of the "same" title (live, karaoke, tribute...). Both sides must agree on them.
 const VERSION = /\b(live|remix|acoustic|instrumental|karaoke|cover|tribute|demo|slowed|sped|nightcore)\b/g
 const versions = (s: string) => { const m: string[] = s.match(VERSION) ?? []; return m.sort().join() }
@@ -62,11 +63,12 @@ function score(x: ListenItem, it: AppleItem): number {
 }
 
 // Best confident match among iTunes results (API order breaks ties), or '' when nothing matches. Only Apple hosts are accepted.
-export function pickApple(x: ListenItem, items: AppleItem[]): string {
+export function pickApple(x: ListenItem, items: AppleItem[], store = storefronts()[0]): string {
+  if (x.kind === 'album') return matchedAlbum(x.name, x.artist ?? '', items, store)
   let url = ''
   let top = 0
   for (const it of items) {
-    const u = x.kind === 'track' ? it.trackViewUrl : x.kind === 'album' ? it.collectionViewUrl : it.artistLinkUrl
+    const u = x.kind === 'track' ? it.trackViewUrl : it.artistLinkUrl
     if (!u || !APPLE.test(u)) continue
     const s = score(x, it)
     if (s > top) { top = s; url = u }
@@ -76,7 +78,7 @@ export function pickApple(x: ListenItem, items: AppleItem[]): string {
 
 // ---- lookup, cache, rate limit -----------------------------------------------------------------------------------
 
-const KEY = 'statsify.appleLinks.v2' // v2: entries from before the lookup worked are not trusted
+const KEY = 'statsify.appleLinks.v3' // verified catalog IDs, scoped by storefront
 const HIT_MS = 30 * 864e5 // a found link is kept 30 days
 const MISS_MS = 7 * 864e5 // "no confident match" is kept 7 days
 const GAP_MS = 1000 // Apple allows roughly 20 searches a minute per address; answers are also cached for a month by the CDN
@@ -93,7 +95,7 @@ const pending = new Map<string, Promise<string>>()
 // shortcut: no size cap. Entries only appear for detail pages that were opened or icons that were pointed at.
 function load(): Record<string, Entry> {
   if (!store) {
-    try { localStorage.removeItem('statsify.appleLinks') } catch {} // the v1 cache
+    try { localStorage.removeItem('statsify.appleLinks'); localStorage.removeItem('statsify.appleLinks.v2') } catch {} // the v1 cache
     try {
       const v = JSON.parse(localStorage.getItem(KEY) || '{}')
       store = v && typeof v === 'object' ? v : {}
@@ -110,13 +112,23 @@ function save() {
   }, 800)
 }
 
-const cacheKey = (x: ListenItem) => (n(x.name) ? [x.kind, n(x.name), x.kind === 'artist' ? '' : n(x.artist ?? ''), x.kind === 'track' ? n(x.album ?? '') : ''].join('|') : '')
+const cacheKey = (x: ListenItem, region: string) => catalogName(x.name) ? JSON.stringify([
+  region, x.kind, catalogName(x.name), x.kind !== 'artist' && catalogName(x.artist ?? ''), x.kind === 'track' && catalogName(x.album ?? ''),
+]) : ''
+
+function validLink(x: ListenItem, url: unknown, region: string): url is string {
+  if (typeof url !== 'string' || !APPLE.test(url)) return false
+  if (x.kind !== 'album') return true
+  const path = /^https:\/\/music\.apple\.com\/([a-z]{2})\/album\/(?:[^/?#]+\/)?[1-9]\d*$/.exec(url)
+  return path?.[1] === region.toLowerCase()
+}
 
 // A link, '' = looked up and nothing matched confidently, undefined = never looked up (or the entry expired).
 export function cachedApple(x: ListenItem): string | undefined {
-  const k = cacheKey(x)
+  const region = storefronts()[0]
+  const k = cacheKey(x, region)
   const e = k ? load()[k] : undefined
-  return e && Date.now() - e[1] < (e[0] ? HIT_MS : MISS_MS) ? e[0] : undefined
+  return Array.isArray(e) && (e[0] === '' || validLink(x, e[0], region)) && Date.now() - e[1] < (e[0] ? HIT_MS : MISS_MS) ? e[0] : undefined
 }
 
 function enqueue<T>(job: () => Promise<T>): Promise<T> {
@@ -130,29 +142,21 @@ function enqueue<T>(job: () => Promise<T>): Promise<T> {
   return run
 }
 
-// The storefronts (country catalogues) to search, most likely first: the one for the device's region (en-ID or id -> ID), then
-// the US catalogue, which has the most. A direct link works in every storefront (Apple Music sends the listener to their own),
-// so this only decides where a song can be found: Indonesian releases are often missing from the US catalogue.
-export function storefronts(): string[] {
-  const lang = typeof navigator !== 'undefined' ? navigator.language || '' : ''
-  const region = /^[a-z]{2,3}[-_]([A-Za-z]{2})\b/.exec(lang)?.[1]?.toUpperCase() ?? (/^id\b/i.test(lang) ? 'ID' : 'US')
-  return region === 'US' ? ['US'] : [region, 'US']
-}
-
-// Asks this app's own /api/apple route, not iTunes: the iTunes Search API sends no CORS headers, so a browser cannot read its
-// answers. That is why the buttons never found a direct link and always fell back to a search link.
-async function lookup(x: ListenItem, k: string): Promise<string> {
+async function lookup(x: ListenItem, k: string, stores: string[]): Promise<string> {
   if (Date.now() < coolUntil) return ''
   const ctl = new AbortController()
   const timeout = setTimeout(() => ctl.abort(), 12000)
   try {
-    const p = new URLSearchParams({ kind: x.kind, name: x.name, cc: storefronts().join(',') })
+    const p = new URLSearchParams({ kind: x.kind, name: x.name, cc: stores.join(',') })
+    // Older app versions cached the unverified route response in the HTTP cache too.
+    if (x.kind === 'album') p.set('v', '3')
     if (x.kind !== 'artist' && x.artist) p.set('artist', x.artist)
     if (x.kind === 'track' && x.album) p.set('album', x.album)
     const res = await fetch(`/api/apple?${p.toString()}`, { signal: ctl.signal })
     if (!res.ok) throw new Error(String(res.status))
     const j = await res.json()
-    const url = typeof j?.url === 'string' && APPLE.test(j.url) ? j.url : ''
+    const url = j?.url
+    if (url !== '' && !validLink(x, url, stores[0])) return ''
     load()[k] = [url, Date.now()]
     save()
     return url
@@ -166,13 +170,14 @@ async function lookup(x: ListenItem, k: string): Promise<string> {
 
 // The exact Apple Music link, or '' (use the search link). Cached, de-duplicated and run one at a time.
 export function resolveApple(x: ListenItem): Promise<string> {
-  const k = cacheKey(x)
+  const stores = storefronts()
+  const k = cacheKey(x, stores[0])
   if (!k) return Promise.resolve('')
   const hit = cachedApple(x)
   if (hit !== undefined) return Promise.resolve(hit)
   let p = pending.get(k)
   if (!p) {
-    p = enqueue(() => lookup(x, k))
+    p = x.kind === 'album' ? lookup(x, k, stores) : enqueue(() => lookup(x, k, stores))
     pending.set(k, p)
     const done = () => { pending.delete(k) }
     p.then(done, done)

@@ -10,7 +10,7 @@ const resp = (status, body) => new Response(typeof body === 'string' ? body : JS
 const mk = (route) => { const calls = []; return { calls, f: async (url) => { calls.push(String(url)); return route(String(url), calls.length) } } }
 const q = (s) => A.parseAppleQuery(new URLSearchParams(s))
 const song = (trackName, artistName, collectionName, id) => ({ trackName, artistName, collectionName, trackViewUrl: `https://music.apple.com/id/album/x/${id}?i=${id}&uo=4` })
-const alb = (collectionName, artistName, id) => ({ collectionName, artistName, collectionViewUrl: `https://music.apple.com/id/album/x/${id}?uo=4` })
+const alb = (collectionName, artistName, id) => ({ wrapperType: 'collection', collectionType: 'Album', collectionId: id, artistId: 25, collectionName, artistName, collectionViewUrl: `https://music.apple.com/id/album/x/${id}?uo=4` })
 const art = (artistName, id) => ({ artistName, artistLinkUrl: `https://music.apple.com/id/artist/x/${id}?uo=4` })
 const params = (u) => Object.fromEntries(new URL(u).searchParams)
 const country = (u) => params(u).country
@@ -58,9 +58,9 @@ const TRACK = 'kind=track&name=Blinding%20Lights&artist=The%20Weeknd&album=After
     assert.deepStrictEqual(await A.lookupApple(q(TRACK), m.f), { ok: true, url: '' })
   })
   await ok('albums and artists use their own entity and search term', async () => {
-    const a = mk(() => found(alb('After Hours (Deluxe)', 'The Weeknd', 21)))
+    const a = mk(() => found(alb('After Hours', 'The Weeknd', 21)))
     const ra = await A.lookupApple(q('kind=album&name=After%20Hours&artist=The%20Weeknd&cc=ID'), a.f)
-    assert.match(ra.url, /\/21\?/); assert.deepStrictEqual([params(a.calls[0]).entity, params(a.calls[0]).term], ['album', 'After Hours The Weeknd'])
+    assert.strictEqual(ra.url, 'https://music.apple.com/id/album/x/21'); assert.deepStrictEqual([params(a.calls[0]).entity, params(a.calls[0]).term], ['album', 'After Hours The Weeknd'])
     const b = mk(() => found(art('Tulus', 5), art('Tulus Band', 6)))
     const rb = await A.lookupApple(q('kind=artist&name=Tulus&cc=ID'), b.f)
     assert.match(rb.url, /\/artist\/x\/5\?/); assert.deepStrictEqual([params(b.calls[0]).entity, params(b.calls[0]).term], ['musicArtist', 'Tulus'])

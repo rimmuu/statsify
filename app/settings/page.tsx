@@ -1,16 +1,17 @@
 'use client'
 import PageHeading from '@/components/PageHeading'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useData } from '@/lib/store'
 import { useI18n, type Lang } from '@/lib/i18n'
 import { importFiles, type Result } from '@/lib/import'
 import { clearAll } from '@/lib/db'
-import { clearPhotoCache, photosEnabled, setPhotosEnabled } from '@/lib/artistPhoto'
-import { AnimatedButton, FadeIn, Switch } from '@/components/Motion'
-import { ease, hoverLift, spring, tapCard, time } from '@/lib/motion'
+import { clearPhotoCache } from '@/lib/artistPhoto'
+import { AnimatedButton, FadeIn } from '@/components/Motion'
+import { ease, hoverLift, tapCard, time } from '@/lib/motion'
 import { useSpotify } from '@/lib/spotify/provider'
 import { reconcileApi } from '@/lib/spotify/sync'
+import StorefrontPicker from '@/components/StorefrontPicker'
 import SpotifyAccount from '@/components/SpotifyAccount'
 import { ConfirmDialog } from '@/components/Dialog'
 
@@ -26,9 +27,6 @@ export default function Settings() {
   const [busy, setBusy] = useState(false)
   const [askClear, setAskClear] = useState(false)
   const sp = useSpotify()
-  const [photos, setPhotos] = useState(true)
-  useEffect(() => { setPhotos(photosEnabled()) }, [])
-
   const run = async (fs: File[]) => {
     if (!fs.length) return
     setBusy(true)
@@ -98,8 +96,7 @@ export default function Settings() {
           <p className="mt-1 text-sm text-neutral-400">{t('set.langHelp')}</p>
           <div role="radiogroup" aria-label={t('set.lang')} className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
             {LANGS.map(([k, flag, name]) => (
-              <AnimatedButton key={k} role="radio" aria-checked={lang === k} onClick={() => setLang(k)} className={`relative flex min-h-[44px] items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm transition-colors ${lang === k ? 'text-white' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
-                {lang === k && <motion.span layoutId="lang-ring" transition={spring} className="absolute inset-0 rounded-xl bg-neutral-700" />}
+              <AnimatedButton key={k} role="radio" aria-checked={lang === k} onClick={() => setLang(k)} className={`relative flex min-h-[44px] items-center gap-3 rounded-xl px-4 py-2.5 text-left text-sm transition-colors ${lang === k ? 'bg-neutral-700 text-white' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
                 <span aria-hidden className="relative z-10 text-xl">{flag}</span>
                 <span className="relative z-10 font-medium">{name}</span>
               </AnimatedButton>
@@ -107,15 +104,7 @@ export default function Settings() {
           </div>
         </div>
       </FadeIn>
-      <FadeIn delay={0.12}>
-        <motion.label className="card lift flex cursor-pointer items-center justify-between gap-4" whileHover={hoverLift} whileTap={tapCard} transition={{ duration: time.micro, ease }}>
-          <span>
-            <span className="block font-medium">{t('set.photos')}</span>
-            <span className="text-sm text-neutral-400">{t('set.photosHelp')}</span>
-          </span>
-          <Switch checked={photos} onChange={(on) => { setPhotosEnabled(on); setPhotos(on) }} label={t('set.photos')} />
-        </motion.label>
-      </FadeIn>
+      <StorefrontPicker />
       <FadeIn delay={0.18}>
         <div className="card space-y-3">
           <div className="font-medium">{t('dm.title')}</div>

@@ -1,9 +1,4 @@
-// Apple Music lookup on the server.
-//
-// Why the server: the iTunes Search API sends no CORS headers, so a browser cannot read its answers. The old in-browser request
-// was blocked every time, no direct link was ever found, and every button fell back to a search link, which the Music app on
-// iPhone opens as its Home screen. The app's own server is not subject to CORS: it asks iTunes, applies the strict matching of
-// pickApple() and returns only the link.
+// Look up catalog records server-side because iTunes search does not allow cross-origin browser requests.
 import { pickApple, type AppleItem, type ListenItem, type ListenKind } from '../listen'
 
 type Fetch = typeof fetch
@@ -20,7 +15,7 @@ export function parseAppleQuery(p: URLSearchParams): AppleQuery | null {
   const name = (p.get('name') ?? '').trim()
   const artist = (p.get('artist') ?? '').trim()
   const album = (p.get('album') ?? '').trim()
-  if (!name || name.length > MAX || artist.length > MAX || album.length > MAX) return null
+  if (!name || (kind === 'album' && !artist) || name.length > MAX || artist.length > MAX || album.length > MAX) return null
   // Up to two storefronts (country codes), most likely first.
   const stores = [...new Set((p.get('cc') ?? 'US').split(',').map((s) => s.trim().toUpperCase()))].filter((s) => /^[A-Z]{2}$/.test(s)).slice(0, 2)
   if (!stores.length) return null
@@ -33,11 +28,17 @@ const plain = (s: string) => s.replace(/[([][^)\]]*[)\]]/g, ' ').replace(/\s[-â€
 
 type Found = { ok: true; results: AppleItem[] } | { ok: false; error: 'rate_limited' | 'upstream' | 'network' }
 
-// Up to three searches per request, 3 s each at most: inside the 10 s a Vercel Hobby function is allowed.
-async function search(term: string, kind: ListenKind, store: string, f: Fetch): Promise<Found> {
-  const qs = new URLSearchParams({ term, media: 'music', entity: ENTITY[kind], limit: '25', country: store }).toString()
+export function search(term: string, kind: ListenKind, store: string, f: Fetch): Promise<Found> {
+  return catalogResults('search', { term, media: 'music', entity: ENTITY[kind], limit: '25', country: store }, f)
+}
+
+export function albumTracks(id: string, store: string, f: Fetch): Promise<Found> {
+  return catalogResults('lookup', { id, entity: 'song', limit: '200', country: store }, f)
+}
+
+async function catalogResults(endpoint: 'search' | 'lookup', params: Record<string, string>, f: Fetch): Promise<Found> {
   try {
-    const res = await f(`https://itunes.apple.com/search?${qs}`, { cache: 'no-store', signal: AbortSignal.timeout(3000) })
+    const res = await f(`https://itunes.apple.com/${endpoint}?${new URLSearchParams(params)}`, { cache: 'no-store', signal: AbortSignal.timeout(3000) })
     if (res.status === 403 || res.status === 429) return { ok: false, error: 'rate_limited' }
     if (res.status === 400) return { ok: true, results: [] } // a country iTunes does not know: nothing to find there
     if (!res.ok) return { ok: false, error: 'upstream' }
@@ -55,7 +56,11 @@ export async function lookupApple(q: AppleQuery, f: Fetch = fetch): Promise<Appl
   const first = termOf(item)
   const second = item.kind === 'track' ? `${plain(item.name)} ${item.artist ?? ''}`.trim() : ''
   // Every storefront with the full title; then, only for a track whose title carries notes, the plain title in the first one.
-  const tries: [string, string][] = stores.map((s): [string, string] => [s, first])
+  // Albums are playable releases in a specific catalog. Search the title alone as a
+  // second discovery query, but apply the same artist/title/ID checks to both responses.
+  const tries: [string, string][] = item.kind === 'album'
+    ? [[stores[0], first], [stores[0], item.name]]
+    : stores.map((s): [string, string] => [s, first])
   if (second && second !== first) tries.push([stores[0], second])
   let failed: AppleResult | null = null
   for (const [store, term] of tries) {
@@ -65,7 +70,7 @@ export async function lookupApple(q: AppleQuery, f: Fetch = fetch): Promise<Appl
       if (r.error === 'rate_limited') break // Apple said slow down: do not ask again
       continue
     }
-    const url = pickApple(item, r.results)
+    const url = pickApple(item, r.results, store)
     if (url) return { ok: true, url }
   }
   return failed ?? { ok: true, url: '' }

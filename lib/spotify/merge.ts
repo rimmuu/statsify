@@ -10,7 +10,7 @@ export const TOLERANCE_MS = 90_000
 export function playToRec(p: ApiPlay): Rec | null {
   const ts = Date.parse(p.playedAt)
   if (!isFinite(ts)) return null
-  return { id: `api|${ts}|${p.track.uri}`, ts, ms: p.track.ms, t: p.track.name, a: p.track.artist, al: p.track.album, u: p.track.uri, src: 'api' }
+  return { id: `api|${ts}|${p.track.uri}`, ts, ms: p.track.ms, t: p.track.name, a: p.track.artist, al: p.track.album, u: p.track.uri, ...(p.track.artistUri ? { artistUri: p.track.artistUri } : {}), src: 'api' }
 }
 
 // An imported play "covers" an API play of the same track when the API timestamp falls inside that play: from its start

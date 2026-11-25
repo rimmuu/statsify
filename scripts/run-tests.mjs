@@ -12,7 +12,7 @@ const work = mkdtempSync(join(tmpdir(), 'statsify-tests-'))
 const out = join(work, 'out')
 const tsc = process.env.TSC || join(root, 'node_modules', '.bin', 'tsc')
 const typeRoots = process.env.TYPE_ROOTS || join(root, 'node_modules', '@types')
-const modules = ['server/session', 'server/spotify', 'server/flows', 'server/apple', 'spotify/types', 'spotify/merge', 'spotify/store', 'spotify/client', 'spotify/sync', 'spotify/genres', 'apiArt', 'artistPhoto', 'listen', 'stats', 'import', 'db']
+const modules = ['server/session', 'server/spotify', 'server/flows', 'server/apple', 'server/artistPhoto', 'spotify/types', 'spotify/merge', 'spotify/store', 'spotify/client', 'spotify/sync', 'spotify/genres', 'apiArt', 'artistPhoto', 'listen', 'stats', 'import', 'db']
 
 writeFileSync(
   join(work, 'tsconfig.json'),

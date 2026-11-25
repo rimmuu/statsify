@@ -7,7 +7,7 @@ import { useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
 import { group, keyOf, monthly, type Row } from '@/lib/stats'
 import { AnimatedButton, FadeIn } from '@/components/Motion'
-import { ease, spring, time } from '@/lib/motion'
+import { ease, time } from '@/lib/motion'
 
 const COLORS = ['#F04458', '#b8b8bf']
 const sel = 'w-full rounded-lg border border-white/10 bg-neutral-900 px-3 py-2.5 text-sm transition-colors hover:border-white/20 sm:py-2'
@@ -36,8 +36,7 @@ export default function Compare() {
       <PageHeading title={t('cmp.title')} period />
       <div className="segments">
         {(['artist', 'track'] as const).map((k) => (
-          <AnimatedButton key={k} aria-pressed={kind === k} onClick={() => { setKind(k); setPick(['', '']) }} className={`relative rounded-lg px-4 py-2 text-sm transition-colors ${kind === k ? 'text-white' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
-            {kind === k && <motion.span layoutId="compare-pill" transition={spring} className="absolute inset-0 rounded-lg bg-neutral-600" />}
+          <AnimatedButton key={k} aria-pressed={kind === k} onClick={() => { setKind(k); setPick(['', '']) }}>
             <span className="relative z-10">{k === 'artist' ? t('cmp.artists') : t('cmp.tracks')}</span>
           </AnimatedButton>
         ))}

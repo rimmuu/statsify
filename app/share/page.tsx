@@ -2,14 +2,14 @@
 import PageHeading from '@/components/PageHeading'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { useData } from '@/lib/store'
+import { useArtistCredits, useData } from '@/lib/store'
 import { useI18n, type K } from '@/lib/i18n'
 import { filterByPeriod, group, pad, type Kind, type Row } from '@/lib/stats'
 import { artistPhoto } from '@/lib/artistPhoto'
 import { THEMES, cardLabels, drawCard, loadImg, trackThumb, type Fmt, type Img, type Item, type Labels, type Spec, type Theme } from '@/lib/card'
 import { Notice, useNotice } from '@/components/Notice'
 import { AnimatedButton, FadeIn } from '@/components/Motion'
-import { ease, spring, time } from '@/lib/motion'
+import { ease, time } from '@/lib/motion'
 
 type Per = 'week' | 'month' | 'year' | 'all' | 'custom'
 const PERS: { k: Per; d: number }[] = [{ k: 'week', d: 7 }, { k: 'month', d: 30 }, { k: 'year', d: 365 }, { k: 'all', d: 0 }, { k: 'custom', d: 0 }]
@@ -28,17 +28,12 @@ function Group({ label, children }: { label: string; children: ReactNode }) {
     </div>
   )
 }
-// Pill whose highlight slides to the selected one (shared layout animation, one layoutId per group).
-function Pill({ on, group: g, onClick, children }: { on: boolean; group: string; onClick: () => void; children: ReactNode }) {
-  return (
-    <AnimatedButton aria-pressed={on} onClick={onClick} className={`relative min-h-[40px] rounded-full px-3.5 py-2 text-sm transition-colors ${on ? 'font-semibold text-white' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
-      {on && <motion.span layoutId={`pill-${g}`} transition={spring} className="absolute inset-0 rounded-lg bg-neutral-600" />}
-      <span className="relative z-10">{children}</span>
-    </AnimatedButton>
-  )
+function Pill({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+  return <button type="button" aria-pressed={on} onClick={onClick} className="filter-pill">{children}</button>
 }
 
 export default function Share() {
+  const credits = useArtistCredits()
   const { all } = useData()
   const { t, hm, date } = useI18n()
   const [per, setPer] = useState<Per>('month')
@@ -77,14 +72,14 @@ export default function Share() {
     let off = false
     ;(async () => {
       const [artist, album, ...tracks] = await Promise.all([
-        st.artist ? artistPhoto(st.artist.name).then(loadImg) : null,
+        st.artist ? artistPhoto(credits.get(st.artist.name)).then(loadImg) : null,
         st.album ? trackThumb(st.album.uri).then(loadImg) : null,
         ...st.tracks.map((x) => trackThumb(x.uri).then(loadImg)),
       ])
       if (!off) setAssets({ s: st, artist: artist ?? null, album: album ?? null, tracks })
     })()
     return () => { off = true }
-  }, [st])
+  }, [st, credits])
   const a = assets && assets.s === st ? assets : null
 
   // Card text is localized here; artist, track and album names are passed through untouched.
@@ -170,11 +165,11 @@ export default function Share() {
           <div className="card space-y-5">
             <Group label={t('sh.period')}>
               <div className="flex flex-wrap gap-2">
-                {PERS.map((o) => <Pill key={o.k} on={per === o.k} group="period" onClick={() => setPer(o.k)}>{t(`sh.p.${o.k}` as K)}</Pill>)}
+                {PERS.map((o) => <Pill key={o.k} on={per === o.k} onClick={() => setPer(o.k)}>{t(`sh.p.${o.k}` as K)}</Pill>)}
               </div>
               <AnimatePresence initial={false}>
                 {per === 'custom' && (
-                  <motion.div key="range" className="overflow-hidden" initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} transition={{ duration: time.enter, ease }}>
+                  <motion.div key="range" className="overflow-hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: time.enter, ease }}>
                     <div className="mt-3 grid grid-cols-2 gap-2">
                       <label className="text-xs text-neutral-500">{t('sh.from')}<input type="date" value={from} max={to} onChange={(e) => setFrom(e.target.value)} className={`${field} mt-1`} /></label>
                       <label className="text-xs text-neutral-500">{t('sh.to')}<input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} className={`${field} mt-1`} /></label>
@@ -189,14 +184,14 @@ export default function Share() {
                   <AnimatedButton key={k} aria-pressed={theme === k} onClick={() => setTheme(k)} className="relative overflow-hidden rounded-xl text-left ring-1 ring-white/10 transition-shadow hover:ring-white/25">
                     <span className="block h-11" style={{ background: THEMES[k].swatch }} />
                     <span className="block bg-neutral-900 px-3 py-2 text-xs">{t(`th.${k}` as K)}</span>
-                    {theme === k && <motion.span layoutId="theme-ring" transition={spring} className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-accent" />}
+                    {theme === k && <span className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-accent" />}
                   </AnimatedButton>
                 ))}
               </div>
             </Group>
             <Group label={t('sh.format')}>
               <div className="flex flex-wrap gap-2">
-                {FMTS.map((k) => <Pill key={k} on={fmt === k} group="format" onClick={() => setFmt(k)}>{t(`sh.f.${k}` as K)}</Pill>)}
+                {FMTS.map((k) => <Pill key={k} on={fmt === k} onClick={() => setFmt(k)}>{t(`sh.f.${k}` as K)}</Pill>)}
               </div>
             </Group>
           </div>
