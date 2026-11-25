@@ -8,11 +8,9 @@ import { artistsOf, hasTop, tracksOf } from '@/lib/spotify/store'
 import type { Range } from '@/lib/spotify/types'
 import Art from './Art'
 import ListenLinks from './ListenLinks'
-import { Reveal } from './Motion'
+import { FadeIn } from './Motion'
 import RangeTabs from './RangeTabs'
 
-// Spotify's own top tracks and artists (from the API), five of each for the chosen period. Spotify does the ranking and
-// gives no play counts or minutes, so none are shown, and none of this is mixed into the statistics from your history.
 export default function SpotifyTop() {
   const { t, dateTime } = useI18n()
   const { top } = useSpotify()
@@ -21,11 +19,11 @@ export default function SpotifyTop() {
   const tracks = tracksOf(top, range).slice(0, 5)
   const artists = artistsOf(top, range).slice(0, 5)
   return (
-    <Reveal>
+    <FadeIn delay={0.18}>
       <div className="card space-y-5">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">
-            <h2 className="font-medium">{t('sp.top.title')}</h2>
+            <h2 className="font-medium text-white">{t('sp.top.title')}</h2>
             <p className="text-sm text-neutral-500">
               {t('sp.top.help')}
               {top.at ? ` · ${t('sp.top.updated', { when: dateTime(top.at) })}` : ''}
@@ -36,26 +34,45 @@ export default function SpotifyTop() {
         <div className="grid gap-6 md:grid-cols-2">
           <Column title={t('sp.top.tracks')} k={range}>
             {tracks.map((x, i) => (
-              <Item key={x.uri} i={i} art={<Art u={x.uri} name={x.name} />} title={x.name} sub={x.artist} links={<ListenLinks compact item={{ kind: 'track', name: x.name, artist: x.artist, album: x.album, uri: x.uri }} />} />
+              <Item
+                key={x.uri}
+                i={i}
+                art={<Art u={x.uri} name={x.name} />}
+                title={x.name}
+                sub={x.artist}
+                links={<ListenLinks compact item={{ kind: 'track', name: x.name, artist: x.artist, album: x.album, uri: x.uri }} />}
+              />
             ))}
           </Column>
           <Column title={t('sp.top.artists')} k={range}>
             {artists.map((x, i) => (
-              <Item key={x.uri} i={i} art={<Art u={`artist:${x.name}`} name={x.name} />} title={x.name} sub={x.genres.slice(0, 2).join(' · ')} links={<ListenLinks compact item={{ kind: 'artist', name: x.name, uri: x.uri }} />} />
+              <Item
+                key={x.uri}
+                i={i}
+                art={<Art u={x.uri} image={x.image} name={x.name} />}
+                title={x.name}
+                sub={x.genres.slice(0, 2).join(' · ')}
+                links={<ListenLinks compact item={{ kind: 'artist', name: x.name, uri: x.uri }} />}
+              />
             ))}
           </Column>
         </div>
       </div>
-    </Reveal>
+    </FadeIn>
   )
 }
 
-// `k` (the period) re-keys the list, so switching periods fades the new list in instead of swapping it abruptly.
 function Column({ title, k, children }: { title: string; k: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
       <h3 className="mb-2 text-sm text-neutral-400">{title}</h3>
-      <motion.ul key={k} className="space-y-2.5" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: time.enter, ease }}>
+      <motion.ul
+        key={k}
+        className="space-y-2.5"
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: time.tab, ease }}
+      >
         {children}
       </motion.ul>
     </div>
@@ -68,7 +85,7 @@ function Item({ i, art, title, sub, links }: { i: number; art: ReactNode; title:
       <span className="w-5 shrink-0 text-center text-sm tabular-nums text-neutral-500">{i + 1}</span>
       {art}
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{title}</div>
+        <div className="truncate text-sm font-medium text-neutral-100">{title}</div>
         {sub && <div className="truncate text-xs text-neutral-500">{sub}</div>}
       </div>
       {links}

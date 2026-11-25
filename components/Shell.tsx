@@ -1,95 +1,135 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import type { ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { LayoutGroup, motion } from 'framer-motion'
+import { ease, sheetSpring, spring, tapPress, time, useMotionTier } from '@/lib/motion'
+import { SpatialProvider, useSpatial } from './SpatialProvider'
+import SpatialStage from './SpatialStage'
 import { Provider, useData } from '@/lib/store'
 import { SpotifyProvider } from '@/lib/spotify/provider'
 import { I18nProvider, useI18n, type K } from '@/lib/i18n'
-import { PERIODS } from '@/lib/stats'
-import { ease, spring, tapPress, time } from '@/lib/motion'
-import { AnimatedButton, FadeIn, MotionRoot, PageSkeleton, PageTransition } from './Motion'
+import { Magnetic, MotionRoot, PageSkeleton } from './Motion'
+import { AppleLinkProvider } from './AppleLinkDialog'
+import { Icon, Tabs } from './Navigation'
+import PageHeading from './PageHeading'
 
-const NAV: [string, K][] = [['/', 'nav.overview'], ['/tracks', 'nav.tracks'], ['/artists', 'nav.artists'], ['/albums', 'nav.albums'], ['/genres', 'nav.genres'], ['/history', 'nav.history'], ['/insights', 'nav.insights'], ['/compare', 'nav.compare'], ['/wrapped', 'nav.wrapped'], ['/share', 'nav.share'], ['/settings', 'nav.settings']]
-
-function Brand() {
-  return (
-    <div className="flex items-baseline gap-1.5 whitespace-nowrap">
-      <span className="text-lg font-semibold text-spotify">● Statsify</span>
-      <span className="text-xs text-neutral-500">by <span className="text-neutral-300">Rimmuu</span></span>
-    </div>
-  )
+const section: Record<string, K> = { '/': 'nav.home', '/tracks': 'nav.songs', '/artists': 'nav.artists', '/albums': 'nav.albums', '/history': 'nav.history', '/insights': 'nav.insights', '/compare': 'nav.compare', '/share': 'nav.share' }
+export function Signal() {
+  return <span aria-hidden className="signal"><i /><i /><i /><i /><i /></span>
 }
+function EmptyLibrary({ path }: { path: string }) {
+  const { t } = useI18n()
+  return <div>
+    <PageHeading title={t(section['/' + path.split('/')[1]] ?? 'nav.home')} />
+    <section className="empty-library">
+      <div className="record" aria-hidden><i><Signal /></i></div>
+      <div className="empty-copy">
+        <h2>{t('e.title')}</h2>
+        <p>{t('e.body')}</p>
+        <Link href="/settings#import" className="primary-action">{t('e.cta')} <Icon name="next" /></Link>
+      </div>
+    </section>
+  </div>
+}
+const NAV: [string, K][] = [
+  ['/', 'nav.home'],
+  ['/tracks', 'nav.songs'],
+  ['/artists', 'nav.artists'],
+  ['/albums', 'nav.albums'],
+  ['/genres', 'nav.genres'],
+  ['/history', 'nav.history'],
+  ['/insights', 'nav.insights'],
+  ['/compare', 'nav.compare'],
+  ['/wrapped', 'nav.wrapped'],
+  ['/share', 'nav.share'],
+  ['/settings', 'nav.settings'],
+  ['/more', 'nav.more'],
+]
 
-// The active pill slides between links (shared layout animation). The sidebar and the phone strip each get their own group.
-function NavLinks({ group, path, intro }: { group: string; path: string; intro: boolean }) {
+// Spatial navigation links: interruptible spring active pill + subtle desktop-only magnetic pointer feel.
+function NavLinks({ group, path, magnetic = false }: { group: string; path: string; magnetic?: boolean }) {
   const { t } = useI18n()
   return (
     <LayoutGroup id={group}>
-      {NAV.map(([h, k], i) => {
+      {NAV.map(([h, k]) => {
         const on = h === '/' ? path === '/' : path === h || path.startsWith(h + '/')
-        return (
-          <motion.div key={h} initial={intro ? { opacity: 0, x: -10 } : false} animate={{ opacity: 1, x: 0 }} transition={{ duration: time.enter, delay: intro ? 0.05 + i * 0.03 : 0, ease }} whileTap={tapPress}>
-            <Link href={h} aria-current={on ? 'page' : undefined} className={`relative block whitespace-nowrap rounded-lg px-3 py-2.5 text-sm transition-colors md:py-2 ${on ? 'text-white' : 'text-neutral-400 hover:text-white'}`}>
-              {on && <motion.span layoutId="nav-pill" transition={spring} className="absolute inset-0 rounded-lg bg-white/10 ring-1 ring-spotify/30 shadow-[0_0_22px_-8px_rgba(29,185,84,0.55)]" />}
-              <span className="relative z-10">{t(k)}</span>
+        const link = (
+          <motion.div key={h} whileTap={tapPress} transition={{ duration: time.micro, ease }}>
+            <Link
+              href={h}
+              aria-current={on ? 'page' : undefined}
+              className={`relative block whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-medium transition-colors md:py-2 ${
+                on ? 'text-white' : 'text-neutral-400 hover:text-neutral-100'
+              }`}
+            >
+              {on && (
+                <motion.span
+                  layoutId="nav-pill"
+                  transition={spring}
+                  className="absolute inset-0 rounded-xl border border-white/[0.12] bg-white/[0.08] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                >
+                  <span
+                    aria-hidden
+                    className="absolute bottom-1.5 left-1.5 top-1.5 hidden w-0.5 rounded-full bg-accent md:block"
+                  />
+                </motion.span>
+              )}
+              <span className="relative z-10 md:pl-1">{t(k)}</span>
             </Link>
           </motion.div>
+        )
+        return magnetic ? (
+          <Magnetic key={h} strength={3.2}>
+            {link}
+          </Magnetic>
+        ) : (
+          link
         )
       })}
     </LayoutGroup>
   )
 }
 
-function Inner({ children }: { children: ReactNode }) {
-  const path = usePathname()
-  const { ready, all, period, setPeriod } = useData()
-  const { t } = useI18n()
-  const show = path === '/settings' || (ready && all.length > 0)
-  if (path === '/wrapped') return <>{children}</>
-  return (
-    <div className="flex min-h-screen">
-      <div aria-hidden className="ambient" />
-      <aside className="hidden w-56 shrink-0 border-r border-white/5 p-4 md:block">
-        <div className="mb-6 px-3"><Brand /></div>
-        <nav aria-label={t('nav.label')} className="flex flex-col gap-1"><NavLinks group="side" path={path} intro /></nav>
-      </aside>
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-10 border-b border-white/5 bg-black/80 backdrop-blur">
-          <div className="px-4 pt-3 md:hidden"><Brand /></div>
-          <nav aria-label={t('nav.label')} className="no-scrollbar flex gap-1 overflow-x-auto p-2 md:hidden"><NavLinks group="top" path={path} intro={false} /></nav>
-          {path !== '/share' && (
-            <LayoutGroup id="period">
-              <div role="group" aria-label={t('per.label')} className="no-scrollbar flex gap-2 overflow-x-auto p-2 md:px-8">
-                {PERIODS.map((p) => (
-                  <AnimatedButton key={p.k} aria-pressed={period === p.k} onClick={() => setPeriod(p.k)} className={`relative whitespace-nowrap rounded-full px-3 py-2 text-xs font-medium transition-colors md:py-1.5 ${period === p.k ? 'text-black' : 'bg-white/5 text-neutral-300 hover:bg-white/10'}`}>
-                    {period === p.k && <motion.span layoutId="period-pill" transition={spring} className="absolute inset-0 rounded-full bg-spotify shadow-[0_0_20px_-6px_rgba(29,185,84,0.55)]" />}
-                    <span className="relative z-10">{t(`per.${p.k}` as K)}</span>
-                  </AnimatedButton>
-                ))}
-              </div>
-            </LayoutGroup>
-          )}
-        </header>
-        <main className="flex-1 p-4 md:p-8">
-          {show ? <PageTransition key={path}>{children}</PageTransition> : ready ? (
-            <FadeIn className="mx-auto mt-16 max-w-md text-center">
-              <h1 className="text-2xl font-semibold">{t('e.title')}</h1>
-              <p className="mt-2 text-neutral-400">{t('e.body')}</p>
-              <motion.div className="mt-6 inline-block" whileHover={{ y: -1 }} whileTap={tapPress} transition={{ duration: time.micro, ease }}>
-                <Link href="/settings" className="inline-block rounded-full bg-spotify px-5 py-2.5 font-medium text-black">{t('e.cta')}</Link>
-              </motion.div>
-            </FadeIn>
-          ) : <PageSkeleton label={t('common.loading')} />}
-        </main>
-        <footer className="border-t border-white/5 px-4 py-6 text-center text-xs text-neutral-500 md:px-8 md:text-left">
-          {t('foot')} <span className="text-neutral-300">Rimmuu</span> © 2026
-        </footer>
-      </div>
-    </div>
-  )
+function Brand() {
+  return <Link href="/" className="brand"><Signal /><strong>Statsify</strong><small>by Rimmuu</small></Link>
 }
 
+function Inner({ children }: { children: ReactNode }) {
+  const path = usePathname()
+  const { ready, all } = useData()
+  const { t } = useI18n()
+  const { sheetDepth } = useSpatial()
+  const tier = useMotionTier()
+  if (path === '/wrapped') return <>{children}</>
+  const independent = ['/settings', '/more', '/genres'].includes(path)
+  const receded = sheetDepth > 0 && tier === 'full'
+  return <>
+    <div className="spatial-shell-viewport min-h-screen">
+      <div aria-hidden className="spatial-ambient" />
+      <motion.div className="flex min-h-screen origin-top" initial={false}
+        animate={receded ? { scale: 0.978, y: 6, rotateX: 1.4, opacity: 0.82 } : { scale: 1, y: 0, rotateX: 0, opacity: 1 }}
+        transition={sheetSpring}>
+        <aside className="hidden w-52 shrink-0 border-r border-white/[0.06] p-4 md:block">
+          <div className="mb-6 px-2"><Brand /></div>
+          <nav aria-label={t('nav.label')} className="flex flex-col gap-1"><NavLinks group="side" path={path} magnetic /></nav>
+        </aside>
+        <div className="app-frame w-full min-w-0">
+          <header className="masthead md:hidden">
+            <Brand />
+            <Link className="utility-link" href="/settings" aria-label={t('nav.settings')}><Icon name="settings" /></Link>
+          </header>
+          <main className="app-main">
+            <SpatialStage pathname={path}>
+              {independent || (ready && all.length > 0) ? children : ready ? <EmptyLibrary path={path} /> : <PageSkeleton label={t('common.loading')} />}
+            </SpatialStage>
+          </main>
+        </div>
+      </motion.div>
+    </div>
+    <div className="md:hidden"><Tabs /></div>
+  </>
+}
 export default function Shell({ children }: { children: ReactNode }) {
-  return <I18nProvider><Provider><SpotifyProvider><MotionRoot><Inner>{children}</Inner></MotionRoot></SpotifyProvider></Provider></I18nProvider>
+  return <I18nProvider><Provider><SpotifyProvider><MotionRoot><SpatialProvider><AppleLinkProvider><Inner>{children}</Inner></AppleLinkProvider></SpatialProvider></MotionRoot></SpotifyProvider></Provider></I18nProvider>
 }

@@ -15,7 +15,7 @@ let n = 0; const ok = (name, fn) => Promise.resolve().then(fn).then(() => { n++;
 
 const UID = 'spotify:track:4uLU6hMCjMI75M1A2tKUQC'
 const song = (trackName, artistName, collectionName, id) => ({ trackName, artistName, collectionName, trackViewUrl: `https://music.apple.com/us/album/x/${id}?i=${id}&uo=4` })
-const alb = (collectionName, artistName, id) => ({ collectionName, artistName, collectionViewUrl: `https://music.apple.com/us/album/x/${id}?uo=4` })
+const alb = (collectionName, artistName, id) => ({ wrapperType: 'collection', collectionType: 'Album', collectionId: id, artistId: 25, collectionName, artistName, collectionViewUrl: `https://music.apple.com/us/album/x/${id}?uo=4` })
 const art = (artistName, id) => ({ artistName, artistLinkUrl: `https://music.apple.com/us/artist/x/${id}?uo=4` })
 const T = (name, artist, album, uri) => ({ kind: 'track', name, artist, album, uri })
 
@@ -55,8 +55,8 @@ const T = (name, artist, album, uri) => ({ kind: 'track', name, artist, album, u
     assert.match(L.pickApple(T('夜に駆ける', 'YOASOBI'), [song('夜に駆ける', 'YOASOBI', 'THE BOOK', 11)]), /\/11\?/)
     assert.strictEqual(L.pickApple(T('夜に駆ける', 'YOASOBI'), [song('群青', 'YOASOBI', 'THE BOOK', 12)]), '')
   })
-  await ok('album: "(Deluxe)" / " - Single" notes ignored, live album rejected', () => {
-    assert.match(L.pickApple({ kind: 'album', name: 'After Hours', artist: 'The Weeknd' }, [alb('After Hours (Deluxe)', 'The Weeknd', 21)]), /\/21\?/)
+  await ok('album: an explicit deluxe edition is matched, other releases are rejected', () => {
+    assert.strictEqual(L.pickApple({ kind: 'album', name: 'After Hours - Deluxe Edition', artist: 'The Weeknd' }, [alb('After Hours (Deluxe)', 'The Weeknd', 21)], 'US'), 'https://music.apple.com/us/album/x/21')
     assert.strictEqual(L.pickApple({ kind: 'album', name: 'After Hours', artist: 'The Weeknd' }, [alb('After Hours (Live)', 'The Weeknd', 22)]), '')
   })
   await ok('artist: exact name only, first hit wins, near-misses rejected', () => {
@@ -70,7 +70,20 @@ const T = (name, artist, album, uri) => ({ kind: 'track', name, artist, album, u
   console.log("Lookup, cache, pauses (calls to this app's /api/apple route, faked here)")
   const setLang = (language) => Object.defineProperty(globalThis, 'navigator', { value: { language }, configurable: true })
   await ok('storefronts: the device region first, then the US catalogue', () => {
-    for (const [lang, want] of [['id-ID', ['ID', 'US']], ['en-ID', ['ID', 'US']], ['id', ['ID', 'US']], ['en-US', ['US']], ['en', ['US']], ['en-GB', ['GB', 'US']], ['zh-Hans-CN', ['US']], ['', ['US']]]) { setLang(lang); assert.deepStrictEqual(L.storefronts(), want, lang) }
+    for (const [lang, want] of [['id-ID', ['ID', 'US']], ['en-ID', ['ID', 'US']], ['id', ['ID', 'US']], ['en-US', ['US']], ['en', ['US']], ['en-GB', ['GB', 'US']], ['zh-Hans-CN', ['CN', 'US']], ['', ['US']]]) { setLang(lang); assert.deepStrictEqual(L.storefronts(), want, lang) }
+  })
+  await ok('account storefront overrides the device, separates cached albums, and uses the same region for search', async () => {
+    const catalog = require(OUT + '/catalog.js')
+    const x = { kind:'album', name:'A+B / C', artist:'AC/DC' }
+    setLang('en-US'); catalog.setStorefront('ID')
+    responder = () => ({ok:true,json:async()=>({url:'https://music.apple.com/id/album/123'})})
+    assert.equal(await L.resolveApple(x),'https://music.apple.com/id/album/123')
+    assert.equal(L.appleSearchUrl(x),'https://music.apple.com/id/search?term=A%2BB%20%2F%20C%20AC%2FDC')
+    catalog.setStorefront(''); assert.deepEqual(L.storefronts(),['US']); assert.equal(L.cachedApple(x),undefined)
+    responder = () => ({ok:true,json:async()=>({url:'https://music.apple.com/us/album/song/17?i=123'})})
+    assert.equal(await L.resolveApple(x),'')
+    catalog.setStorefront('ID'); assert.equal(L.cachedApple(x),'https://music.apple.com/id/album/123')
+    catalog.setStorefront(''); calls = []
   })
   setLang('id-ID')
   const LINK = 'https://music.apple.com/id/album/x/4?i=4&uo=4'
@@ -88,15 +101,16 @@ const T = (name, artist, album, uri) => ({ kind: 'track', name, artist, album, u
   await ok('an album sends its artist, an artist only its name', async () => {
     const c = calls.length
     await L.resolveApple({ kind: 'album', name: 'After Hours', artist: 'The Weeknd', album: 'ignored' }); await L.resolveApple({ kind: 'artist', name: 'The Weeknd', artist: 'ignored', album: 'ignored' })
-    assert.deepStrictEqual(Object.fromEntries(new URL(calls[c], 'http://app.test').searchParams), { kind: 'album', name: 'After Hours', cc: 'ID,US', artist: 'The Weeknd' })
+    assert.deepStrictEqual(Object.fromEntries(new URL(calls[c], 'http://app.test').searchParams), { kind: 'album', name: 'After Hours', cc: 'ID,US', v:'3', artist: 'The Weeknd' })
     assert.deepStrictEqual(Object.fromEntries(new URL(calls[c + 1], 'http://app.test').searchParams), { kind: 'artist', name: 'The Weeknd', cc: 'ID,US' })
   })
-  await ok('second lookup comes from the cache with no request, is saved under the v2 key, and the old v1 key is dropped', async () => {
+  await ok('second lookup comes from the cache with no request, is saved under its storefront, and old cache versions are dropped', async () => {
     assert.strictEqual(await L.resolveApple(A), LINK); const c = calls.length
-    await new Promise((r) => realST(r, 20)); assert.ok(JSON.parse(store['statsify.appleLinks.v2'])['track|blinding lights|the weeknd|after hours'])
+    await new Promise((r) => realST(r, 20)); assert.ok(JSON.parse(store['statsify.appleLinks.v3'])[JSON.stringify(['ID','track','blinding lights','the weeknd','after hours'])])
+    store['statsify.appleLinks.v2'] = '{}'
     store['statsify.appleLinks'] = '{"old":["https://music.apple.com/x",1]}'
     delete require.cache[require.resolve(OUT + '/listen.js')]; const L2 = require(OUT + '/listen.js') // a fresh page load
-    assert.strictEqual(L2.cachedApple(A), LINK); assert.ok(!('statsify.appleLinks' in store)); assert.strictEqual(calls.length, c)
+    assert.strictEqual(L2.cachedApple(A), LINK); assert.ok(!('statsify.appleLinks' in store) && !('statsify.appleLinks.v2' in store)); assert.strictEqual(calls.length, c)
   })
   await ok('"not on Apple Music" is cached too, so a miss is not asked again', async () => {
     responder = () => answer('')

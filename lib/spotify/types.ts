@@ -3,7 +3,7 @@ export type Range = 'short_term' | 'medium_term' | 'long_term'
 export const RANGES: Range[] = ['short_term', 'medium_term', 'long_term']
 
 // `artist` is the album artist (what Spotify's export calls master_metadata_album_artist_name), so API plays group with imported ones.
-export type ApiTrack = { id: string; uri: string; name: string; artist: string; album: string; image: string; ms: number }
+export type ApiTrack = { id: string; uri: string; name: string; artist: string; album: string; image: string; ms: number; artistUri?: string }
 export type ApiArtist = { id: string; uri: string; name: string; genres: string[]; image: string }
 export type ApiPlay = { playedAt: string; track: ApiTrack }
 

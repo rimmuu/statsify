@@ -1,13 +1,16 @@
 'use client'
+import Link from 'next/link'
+import PageHeading from '@/components/PageHeading'
 import { useMemo } from 'react'
 import { useData } from '@/lib/store'
 import { useI18n } from '@/lib/i18n'
-import { group, pad, type Row } from '@/lib/stats'
+import { enc, group, pad, type Row } from '@/lib/stats'
 import Stat from '@/components/Stat'
 import HoursChart from '@/components/Chart'
 import CountUp from '@/components/CountUp'
-import { FadeIn, Reveal, StaggerContainer } from '@/components/Motion'
+import { FadeIn, StaggerContainer, Tilt } from '@/components/Motion'
 import Art, { ambient, useAccent, useArtSrc } from '@/components/Art'
+import { useAmbientLight } from '@/components/SpatialProvider'
 import SpotifyTop from '@/components/SpotifyTop'
 import { useSpotify } from '@/lib/spotify/provider'
 import { artistsOf } from '@/lib/spotify/store'
@@ -37,37 +40,43 @@ export default function Overview() {
   }, [recs])
   const topUri = d.t?.uri ?? ''
   const rgb = useAccent(useArtSrc(topUri))
+  useAmbientLight(rgb)
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      <h1 className="text-2xl font-semibold">{t('nav.overview')}</h1>
-      <FadeIn delay={0.04}>
-        <div className="card amb overflow-hidden" style={ambient(rgb)}>
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:gap-7">
-            {topUri && <Art big u={topUri} name={d.t?.name ?? ''} />}
-            <div className="min-w-0">
-              <div className="text-sm text-neutral-400">{t('ov.total')}</div>
-              <div className="mt-2 text-3xl font-semibold sm:text-4xl md:text-5xl"><CountUp value={d.ms} format={dur} ms={1100} /></div>
-              <div className="mt-1 text-neutral-400"><CountUp value={d.ms} format={(n) => `${hm(n)} · ${t('n.minutes', { n: Math.floor(n / 6e4) })}`} ms={1100} /></div>
-            </div>
+    <div className="overview">
+      <PageHeading title={t('nav.home')} period />
+      <FadeIn>
+        <Tilt max={1.8}><section className="listening-hero amb" style={ambient(rgb)}>
+          {topUri ? <Art u={topUri} name={d.t?.name ?? ''} cls="hero-art" eager /> : <div className="record" aria-hidden><i /></div>}
+          <div className="hero-copy">
+            <h2>{t('ov.total')}</h2>
+            <div className="hero-time"><CountUp value={d.ms} format={hm} /></div>
+            <p><CountUp value={d.ms} format={dur} /> · {t('n.minutes', { n: Math.floor(d.ms / 6e4) })}</p>
           </div>
-        </div>
+        </section></Tilt>
       </FadeIn>
-      <StaggerContainer className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Stat l={t('s.events')} n={recs.length} fmt={num} s={t('s.streamsSub', { n: d.streams })} />
-        <Stat l={t('s.uTracks')} n={d.tr.length} fmt={num} />
-        <Stat l={t('s.uArtists')} n={d.ar.length} fmt={num} />
-        <Stat l={t('s.uAlbums')} n={d.al.length} fmt={num} />
-        <Stat l={t('s.topTrack')} v={d.t?.name ?? '–'} s={d.t?.sub} />
-        <Stat l={t('s.topArtist')} v={d.a?.name ?? '–'} s={d.a && hm(d.a.ms)} />
-        <Stat l={t('s.topAlbum')} v={d.l?.name ?? '–'} s={d.l?.sub} />
-        <Stat l={t('s.favGenre')} v={favGenre ?? t('s.unavailable')} s={favGenre ? t('sp.genre.sub') : t('s.notInExport')} />
+      <StaggerContainer className="metric-strip">
+        <Stat featured l={t('s.events')} n={recs.length} fmt={num} s={t('s.streamsSub', { n: d.streams })} />
+        <Stat featured l={t('s.uTracks')} n={d.tr.length} fmt={num} />
+        <Stat featured l={t('s.uArtists')} n={d.ar.length} fmt={num} />
+        <Stat featured l={t('s.uAlbums')} n={d.al.length} fmt={num} />
       </StaggerContainer>
-      <Reveal>
-        <div className="card">
-          <h2 className="mb-4 font-medium">{t('ov.perMonth')}</h2>
-          <HoursChart data={d.months} />
-        </div>
-      </Reveal>
+      <div className="overview-columns">
+        <section>
+          <h2 className="section-title">{t('ov.highlights')}</h2>
+          {([['track', 's.topTrack', d.t], ['artist', 's.topArtist', d.a], ['album', 's.topAlbum', d.l]] as const).map(([kind, label, row]) => (
+            <div key={kind} className="highlight">
+              {row && <Art u={kind === 'artist' ? `artist:${row.name}` : row.uri} name={row.name} />}
+              <div className="min-w-0">
+                <p className="caption">{t(label)}</p>
+                {row ? <Link className="highlight-name" href={kind === 'album' ? '/albums' : `/${kind}s/${enc(row.key)}`}>{row.name}</Link> : <span>–</span>}
+                {row && <p className="secondary">{kind === 'artist' ? `${t('n.plays', { n: row.plays })} · ${hm(row.ms)}` : row.sub}</p>}
+              </div>
+            </div>
+          ))}
+          <div className="genre-note"><span className="caption">{t('s.favGenre')}</span><strong>{favGenre ?? t('s.unavailable')}</strong><span className="secondary">{t(favGenre ? 'sp.genre.sub' : 's.notInExport')}</span></div>
+        </section>
+        <section className="chart-section"><h2 className="section-title">{t('ov.perMonth')}</h2><HoursChart data={d.months} /></section>
+      </div>
       <SpotifyTop />
     </div>
   )

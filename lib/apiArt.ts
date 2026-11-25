@@ -35,6 +35,27 @@ export function rememberArt(entries: [string, string][]) {
 }
 
 export function clearApiArt() {
+  thumbs.clear()
   map = {}
   try { localStorage.removeItem(KEY) } catch {}
+}
+
+const thumbs = new Map<string, Promise<string>>()
+export function trackThumb(uri: string): Promise<string> {
+  if (!/^spotify:track:[A-Za-z0-9]{22}$/.test(uri)) return Promise.resolve('')
+  const known = apiArt(uri)
+  if (known) return Promise.resolve(known)
+  const cached = thumbs.get(uri)
+  if (cached) return cached
+  const url = 'https://open.spotify.com/track/' + uri.slice('spotify:track:'.length)
+  const request: Promise<string> = fetch('https://open.spotify.com/oembed?' + new URLSearchParams({ url }), { signal: AbortSignal.timeout(5000) })
+    .then(async res => res.ok ? (await res.json()).thumbnail_url ?? '' : '')
+    .catch(() => '')
+    .then(url => {
+      if (!url && thumbs.get(uri) === request) thumbs.delete(uri)
+      return typeof url === 'string' ? url : ''
+    })
+  thumbs.set(uri, request)
+  if (thumbs.size > MAX) thumbs.delete(thumbs.keys().next().value!)
+  return request
 }
