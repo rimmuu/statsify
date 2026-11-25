@@ -19,14 +19,14 @@ export default function Genres() {
   const has = hasTop(top)
   const rows = genreShares(artistsOf(top, range))
   return (
-    <div className="reading-width">
+    <div className="mx-auto max-w-2xl">
       <PageHeading title={t('g.title')} />
       {has ? (
-        <FadeIn delay={0.08}>
+        <FadeIn delay={0.06}>
           <div className="card mt-6 space-y-4">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0 flex-1 basis-56">
-                <p className="font-medium">{t('g.api.head')}</p>
+                <p className="font-medium text-white">{t('g.api.head')}</p>
                 <p className="mt-1 text-sm text-neutral-500">{t('g.api.help')}</p>
               </div>
               <RangeTabs id="genres" value={range} onChange={setRange} />
@@ -36,11 +36,16 @@ export default function Genres() {
                 {rows.map((g, i) => (
                   <li key={`${range}-${g.genre}`}>
                     <div className="flex items-baseline justify-between gap-3 text-sm">
-                      <span className="min-w-0 truncate capitalize">{g.genre}</span>
+                      <span className="min-w-0 truncate capitalize text-neutral-100">{g.genre}</span>
                       <span className="shrink-0 tabular-nums text-neutral-400">{num(Math.round(g.pct))}%</span>
                     </div>
-                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/5">
-                      <motion.div className="h-full origin-left rounded-full bg-neutral-400" initial={{ scaleX: 0 }} animate={{ scaleX: g.pct / 100 }} transition={{ duration: time.cine, delay: Math.min(i, 10) * 0.045, ease }} />
+                    <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-white/[0.06]">
+                      <motion.div
+                        className="h-full origin-left rounded-full bg-gradient-to-r from-accent to-accent-soft"
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: g.pct / 100 }}
+                        transition={{ duration: time.cine, delay: Math.min(i, 10) * 0.035, ease }}
+                      />
                     </div>
                   </li>
                 ))}
@@ -51,14 +56,16 @@ export default function Genres() {
           </div>
         </FadeIn>
       ) : (
-        <FadeIn delay={0.08}>
+        <FadeIn delay={0.06}>
           <div className="card mt-6 space-y-3 text-neutral-300">
             <p className="font-medium text-white">{t('g.head')}</p>
             <p>{t('g.body')}</p>
             <p className="text-sm text-neutral-500">{t('g.foot')}</p>
             {status?.configured && !status.connected && (
               <p className="text-sm">
-                <Link href="/settings" className="text-accent">{t('g.connect')}</Link>
+                <Link href="/settings" className="text-accent-soft hover:underline">
+                  {t('g.connect')}
+                </Link>
               </p>
             )}
           </div>

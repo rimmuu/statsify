@@ -8,8 +8,9 @@ import { enc, group, pad, type Row } from '@/lib/stats'
 import Stat from '@/components/Stat'
 import HoursChart from '@/components/Chart'
 import CountUp from '@/components/CountUp'
-import { FadeIn, StaggerContainer } from '@/components/Motion'
+import { FadeIn, StaggerContainer, Tilt } from '@/components/Motion'
 import Art, { ambient, useAccent, useArtSrc } from '@/components/Art'
+import { useAmbientLight } from '@/components/SpatialProvider'
 import SpotifyTop from '@/components/SpotifyTop'
 import { useSpotify } from '@/lib/spotify/provider'
 import { artistsOf } from '@/lib/spotify/store'
@@ -39,24 +40,25 @@ export default function Overview() {
   }, [recs])
   const topUri = d.t?.uri ?? ''
   const rgb = useAccent(useArtSrc(topUri))
+  useAmbientLight(rgb)
   return (
     <div className="overview">
       <PageHeading title={t('nav.home')} period />
       <FadeIn>
-        <section className="listening-hero amb" style={ambient(rgb)}>
-          <div className="record" aria-hidden><i /></div>
+        <Tilt max={1.8}><section className="listening-hero amb" style={ambient(rgb)}>
+          {topUri ? <Art u={topUri} name={d.t?.name ?? ''} cls="hero-art" eager /> : <div className="record" aria-hidden><i /></div>}
           <div className="hero-copy">
             <h2>{t('ov.total')}</h2>
             <div className="hero-time"><CountUp value={d.ms} format={hm} /></div>
             <p><CountUp value={d.ms} format={dur} /> · {t('n.minutes', { n: Math.floor(d.ms / 6e4) })}</p>
           </div>
-        </section>
+        </section></Tilt>
       </FadeIn>
       <StaggerContainer className="metric-strip">
-        <Stat l={t('s.events')} n={recs.length} fmt={num} s={t('s.streamsSub', { n: d.streams })} />
-        <Stat l={t('s.uTracks')} n={d.tr.length} fmt={num} />
-        <Stat l={t('s.uArtists')} n={d.ar.length} fmt={num} />
-        <Stat l={t('s.uAlbums')} n={d.al.length} fmt={num} />
+        <Stat featured l={t('s.events')} n={recs.length} fmt={num} s={t('s.streamsSub', { n: d.streams })} />
+        <Stat featured l={t('s.uTracks')} n={d.tr.length} fmt={num} />
+        <Stat featured l={t('s.uArtists')} n={d.ar.length} fmt={num} />
+        <Stat featured l={t('s.uAlbums')} n={d.al.length} fmt={num} />
       </StaggerContainer>
       <div className="overview-columns">
         <section>

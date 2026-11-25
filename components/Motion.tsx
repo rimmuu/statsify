@@ -1,38 +1,120 @@
 'use client'
 import { forwardRef, type ReactNode } from 'react'
-import { MotionConfig, motion, useReducedMotion, type HTMLMotionProps } from 'framer-motion'
-import { containerV, ease, riseV, tapPress, time } from '@/lib/motion'
+import { MotionConfig, motion, useMotionValue, useSpring, useTransform, type HTMLMotionProps } from 'framer-motion'
+import {
+  containerV,
+  ease,
+  magneticSpring,
+  riseV,
+  spring,
+  tapPress,
+  tiltSpring,
+  time,
+  useFinePointer,
+  useMotionTier,
+} from '@/lib/motion'
 
-// Every motion component below this honours the OS "reduce motion" setting (transforms and layout animations are
-// switched off, opacity still fades). No global state is involved.
+// Honours the OS "reduce motion" setting globally across all Framer Motion components.
 export function MotionRoot({ children }: { children: ReactNode }) {
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>
 }
 
-// Route change: a short opacity transition. Give it key={pathname}: only the page area remounts, never providers or data.
-export function PageTransition({ children, className }: { children: ReactNode; className?: string }) {
-  const reduce = useReducedMotion()
-  return <motion.div className={className} initial={reduce ? false : { opacity: 0.65 }} animate={{ opacity: 1 }} transition={{ duration: time.page, ease }}>{children}</motion.div>
-}
-
-// Entrance for one block; `delay` is in seconds.
+// Crisp entrance for a section or block; `delay` is in seconds. Never uses scroll IntersectionObservers.
 export function FadeIn({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
-  return <motion.div className={className} variants={riseV} initial="hidden" animate="show" custom={delay}>{children}</motion.div>
+  return (
+    <motion.div className={className} variants={riseV} initial="hidden" animate="show" custom={delay}>
+      {children}
+    </motion.div>
+  )
 }
 
-// Only small groups of overview metrics share an entrance.
+// Small stat/metric grids: children stagger once on initial appearance without replaying on filter switches.
 export function StaggerContainer({ children, className }: { children: ReactNode; className?: string }) {
-  return <motion.div className={className} variants={containerV} initial="hidden" animate="show">{children}</motion.div>
+  return (
+    <motion.div className={className} variants={containerV} initial="hidden" animate="show">
+      {children}
+    </motion.div>
+  )
 }
 
+// Immediate tactile depth-press button (140ms micro-interaction, never delays click events).
 export const AnimatedButton = forwardRef<HTMLButtonElement, HTMLMotionProps<'button'>>(function AnimatedButton({ disabled, ...rest }, ref) {
-  return <motion.button ref={ref} type="button" disabled={disabled} whileHover={disabled ? undefined : { y: -1 }} whileTap={disabled ? undefined : tapPress} transition={{ duration: time.micro, ease }} {...rest} />
+  return (
+    <motion.button
+      ref={ref}
+      type="button"
+      disabled={disabled}
+      whileHover={disabled ? undefined : { y: -1 }}
+      whileTap={disabled ? undefined : tapPress}
+      transition={{ duration: time.micro, ease }}
+      {...rest}
+    />
+  )
 })
 
-// Loading placeholder with a soft shimmer (the CSS is in globals.css and switches itself off under prefers-reduced-motion).
+// Desktop-only magnetic pointer attraction (strictly fine pointers + full motion tier; zero React re-renders).
+export function Magnetic({ children, className = '', strength = 4.5 }: { children: ReactNode; className?: string; strength?: number }) {
+  const fine = useFinePointer()
+  const tier = useMotionTier()
+  const mx = useMotionValue(0)
+  const my = useMotionValue(0)
+  const x = useSpring(mx, magneticSpring)
+  const y = useSpring(my, magneticSpring)
+
+  if (!fine || tier !== 'full') return <div className={className}>{children}</div>
+  return (
+    <motion.div
+      className={className}
+      style={{ x, y }}
+      onPointerMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect()
+        const nx = (e.clientX - r.left) / r.width - 0.5
+        const ny = (e.clientY - r.top) / r.height - 0.5
+        mx.set(nx * strength * 2)
+        my.set(ny * strength * 2)
+      }}
+      onPointerLeave={() => {
+        mx.set(0)
+        my.set(0)
+      }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+// Pointer-following 3D depth tilt: strictly desktop fine pointers + full motion tier, zero React re-renders.
+export function Tilt({ children, className = '', max = 4.5 }: { children: ReactNode; className?: string; max?: number }) {
+  const fine = useFinePointer()
+  const tier = useMotionTier()
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  const rotateX = useSpring(useTransform(y, [-0.5, 0.5], [max, -max]), tiltSpring)
+  const rotateY = useSpring(useTransform(x, [-0.5, 0.5], [-max, max]), tiltSpring)
+
+  if (!fine || tier !== 'full') return <div className={className}>{children}</div>
+  return (
+    <motion.div
+      className={className}
+      style={{ rotateX, rotateY, transformPerspective: 1000 }}
+      onPointerMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect()
+        x.set((e.clientX - r.left) / r.width - 0.5)
+        y.set((e.clientY - r.top) / r.height - 0.5)
+      }}
+      onPointerLeave={() => {
+        x.set(0)
+        y.set(0)
+      }}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+// Loading shimmer placeholder (compositor translateX only, pauses automatically when hidden or reduced-motion).
 export const Skeleton = ({ className = '' }: { className?: string }) => <div aria-hidden className={`skeleton ${className}`} />
 
-// What the app shows while the saved history loads: roughly the shape of the Overview page.
 export function PageSkeleton({ label }: { label: string }) {
   return (
     <div role="status" aria-label={label} className="mx-auto max-w-5xl space-y-6">
@@ -47,10 +129,18 @@ export function PageSkeleton({ label }: { label: string }) {
   )
 }
 
+// Accessible spring toggle switch.
 export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (on: boolean) => void; label: string }) {
   return (
-    <button type="button" role="switch" aria-checked={checked} aria-label={label} onClick={() => onChange(!checked)} className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-accent' : 'bg-neutral-700'}`}>
-      <span className={`absolute left-1 top-1 h-5 w-5 rounded-full bg-white transition-transform ${checked ? 'translate-x-5' : ''}`} />
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onChange(!checked)}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-accent' : 'bg-neutral-700'}`}
+    >
+      <motion.span layout transition={spring} className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow ${checked ? 'right-1' : 'left-1'}`} />
     </button>
   )
 }

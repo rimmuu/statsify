@@ -5,7 +5,6 @@ import { ease, time } from '@/lib/motion'
 
 export type Note = { ok: boolean; t: string; id: number }
 
-// Toast state: flash() shows a message for 5 s and replaces any message that is still showing.
 export function useNotice() {
   const [note, setNote] = useState<Note | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -23,9 +22,22 @@ export function Notice({ note }: { note: Note | null }) {
   return (
     <AnimatePresence>
       {note && (
-        <motion.p key={note.id} role="status" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 8 }} transition={{ duration: time.enter, ease }}
-          className={`flex items-start gap-2 rounded-xl px-3 py-2 text-sm ${note.ok ? 'bg-accent/10 text-accent' : 'bg-red-500/10 text-red-400'}`}>
-          <span aria-hidden>{note.ok ? '✓' : '!'}</span>
+        <motion.p
+          key={note.id}
+          role="status"
+          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 6, scale: 0.98 }}
+          transition={{ duration: time.tab, ease }}
+          className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-sm ${
+            note.ok
+              ? 'border-white/[0.12] bg-white/[0.06] text-neutral-100'
+              : 'border-accent/25 bg-accent/[0.12] text-accent-soft'
+          }`}
+        >
+          <span aria-hidden className={note.ok ? 'text-spotify' : 'text-accent-soft'}>
+            {note.ok ? '✓' : '!'}
+          </span>
           <span>{note.t}</span>
         </motion.p>
       )}
