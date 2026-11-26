@@ -20,6 +20,13 @@ export function filterByPeriod(rs: Rec[], days: number): Rec[] {
   return rs.filter((r) => r.ts >= from)
 }
 
+export function filterByDateRange(rs: Rec[], fromIso: string, toIso: string): Rec[] {
+  const a = Date.parse(fromIso + 'T00:00:00')
+  const b = Date.parse(toIso + 'T23:59:59.999')
+  if (!isFinite(a) || !isFinite(b) || a > b) return []
+  return rs.filter((r) => r.ts >= a && r.ts <= b)
+}
+
 export const pad = (n: number) => String(n).padStart(2, '0')
 
 export function dur(ms: number): string {
@@ -87,4 +94,85 @@ export function activity(rs: Rec[]) {
   let best = 0, run = 0
   s.forEach((x, i) => { run = i && x === s[i - 1] + 1 ? run + 1 : 1; best = Math.max(best, run) })
   return { hours, weekdays, best, active: s.length }
+}
+
+export type HeatmapDay = { date: string; ms: number; plays: number; level: 0 | 1 | 2 | 3 | 4 }
+
+// Builds a trailing 26-week (182-day) daily heatmap ending on the newest play in `rs`.
+export function dailyHeatmap(rs: Rec[], weeks = 26): HeatmapDay[] {
+  if (!rs.length) return []
+  let maxTs = 0
+  const byDay = new Map<string, { ms: number; plays: number }>()
+  for (const r of rs) {
+    if (r.ts > maxTs) maxTs = r.ts
+    const d = new Date(r.ts)
+    const k = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+    const cur = byDay.get(k)
+    if (cur) { cur.ms += r.ms; cur.plays++ }
+    else byDay.set(k, { ms: r.ms, plays: 1 })
+  }
+  const end = new Date(maxTs)
+  end.setHours(12, 0, 0, 0)
+  // Align end to Saturday so grid columns are crisp Sun..Sat weeks
+  const totalDays = weeks * 7
+  const start = new Date(end.getTime() - (totalDays - 1) * 864e5)
+  const raw: { date: string; ms: number; plays: number }[] = []
+  let peakMs = 0
+  for (let i = 0; i < totalDays; i++) {
+    const cur = new Date(start.getTime() + i * 864e5)
+    const k = `${cur.getFullYear()}-${pad(cur.getMonth() + 1)}-${pad(cur.getDate())}`
+    const hit = byDay.get(k)
+    const ms = hit?.ms ?? 0
+    if (ms > peakMs) peakMs = ms
+    raw.push({ date: k, ms, plays: hit?.plays ?? 0 })
+  }
+  return raw.map((d) => {
+    if (!d.ms || !peakMs) return { ...d, level: 0 }
+    const ratio = d.ms / peakMs
+    const level: 1 | 2 | 3 | 4 = ratio > 0.72 ? 4 : ratio > 0.44 ? 3 : ratio > 0.18 ? 2 : 1
+    return { ...d, level }
+  })
+}
+
+export type ListeningProfile = {
+  chronotype: 'night' | 'morning' | 'afternoon' | 'evening'
+  peakHour: number
+  streamRatio: number // % of play events >= 30s
+  avgDailyMs: number
+  topArtistShare: number // % of total ms
+  weekendShare: number // % of total ms on Sat/Sun
+  uniqueRatio: number // unique tracks / total plays * 100
+  nightShare: number // % between 22:00 and 04:59
+}
+
+// 100% derived from real records, never invented.
+export function listeningProfile(rs: Rec[]): ListeningProfile {
+  const act = activity(rs)
+  let totalMs = 0
+  let streams = 0
+  const artists = new Map<string, number>()
+  const uniqueTracks = new Set<string>()
+  for (const r of rs) {
+    totalMs += r.ms
+    if (r.ms >= 30000) streams++
+    artists.set(r.a, (artists.get(r.a) ?? 0) + r.ms)
+    uniqueTracks.add(keyOf('track', r))
+  }
+  const peakHour = act.hours.reduce((b, v, i) => (v > act.hours[b] ? i : b), 0)
+  const chronotype: ListeningProfile['chronotype'] =
+    peakHour >= 22 || peakHour < 5 ? 'night' : peakHour < 12 ? 'morning' : peakHour < 17 ? 'afternoon' : 'evening'
+  let topArtistMs = 0
+  for (const v of artists.values()) if (v > topArtistMs) topArtistMs = v
+  const weekendMs = act.weekdays[0] + act.weekdays[6]
+  const nightMs = act.hours[22] + act.hours[23] + act.hours[0] + act.hours[1] + act.hours[2] + act.hours[3] + act.hours[4]
+  return {
+    chronotype,
+    peakHour,
+    streamRatio: rs.length ? (streams / rs.length) * 100 : 0,
+    avgDailyMs: act.active ? totalMs / act.active : 0,
+    topArtistShare: totalMs ? (topArtistMs / totalMs) * 100 : 0,
+    weekendShare: totalMs ? (weekendMs / totalMs) * 100 : 0,
+    uniqueRatio: rs.length ? (uniqueTracks.size / rs.length) * 100 : 0,
+    nightShare: totalMs ? (nightMs / totalMs) * 100 : 0,
+  }
 }

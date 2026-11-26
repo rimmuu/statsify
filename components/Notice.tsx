@@ -1,7 +1,8 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { ease, time } from '@/lib/motion'
+import { AnimatePresence, motion } from 'motion/react'
+import { AlertCircle, Check } from 'lucide-react'
+import { easeOut, time } from '@/lib/motion'
 
 export type Note = { ok: boolean; t: string; id: number }
 
@@ -25,19 +26,21 @@ export function Notice({ note }: { note: Note | null }) {
         <motion.p
           key={note.id}
           role="status"
-          initial={{ opacity: 0, y: 8, scale: 0.98 }}
+          initial={{ opacity: 0, y: 6, scale: 0.97 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          exit={{ opacity: 0, y: 6, scale: 0.98 }}
-          transition={{ duration: time.tab, ease }}
-          className={`flex items-start gap-2 rounded-xl border px-3 py-2 text-sm ${
+          exit={{ opacity: 0, y: 4, scale: 0.97 }}
+          transition={{ duration: time.fast, ease: easeOut }}
+          className={`flex items-start gap-2.5 rounded-xl border px-3.5 py-2.5 text-sm ${
             note.ok
-              ? 'border-white/[0.12] bg-white/[0.06] text-neutral-100'
-              : 'border-accent/25 bg-accent/[0.12] text-accent-soft'
+              ? 'border-white/[0.12] bg-[#18181B] text-[#F5F5F5]'
+              : 'border-[#FA334F]/30 bg-[#FA334F]/10 text-[#FF5C72]'
           }`}
         >
-          <span aria-hidden className={note.ok ? 'text-spotify' : 'text-accent-soft'}>
-            {note.ok ? '✓' : '!'}
-          </span>
+          {note.ok ? (
+            <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#1DB954]" aria-hidden />
+          ) : (
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-[#FA334F]" aria-hidden />
+          )}
           <span>{note.t}</span>
         </motion.p>
       )}

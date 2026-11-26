@@ -5,13 +5,14 @@ const prefersReduced = () => typeof window !== 'undefined' && window.matchMedia(
 
 // Smoothly interpolates between previous and new numeric values without resetting to 0 on filter changes.
 // Uses exponential ease-out matching cubic-bezier(0.16, 1, 0.3, 1) and pauses cleanly if the page is hidden.
-export default function CountUp({ value, format, ms = 720 }: { value: number; format: (n: number) => string; ms?: number }) {
+export default function CountUp({ value, format, ms = 420 }: { value: number; format: (n: number) => string; ms?: number }) {
   const [shown, setShown] = useState(value)
   const currentRef = useRef(value)
   const initialized = useRef(false)
 
   useEffect(() => {
-    const startVal = initialized.current ? currentRef.current : 0
+    const firstStart = value > 5 ? Math.round(value * 0.68) : value
+    const startVal = initialized.current ? currentRef.current : firstStart
     initialized.current = true
     if (prefersReduced() || startVal === value || document.visibilityState === 'hidden') {
       currentRef.current = value
@@ -19,7 +20,7 @@ export default function CountUp({ value, format, ms = 720 }: { value: number; fo
       return
     }
     let raf = 0
-    let startTime = performance.now()
+    let startTime = 0
     let pausedAt = 0
 
     const onVis = () => {
@@ -27,14 +28,15 @@ export default function CountUp({ value, format, ms = 720 }: { value: number; fo
         pausedAt = performance.now()
         cancelAnimationFrame(raf)
       } else if (pausedAt) {
-        startTime += performance.now() - pausedAt
+        if (startTime) startTime += performance.now() - pausedAt
         pausedAt = 0
         raf = requestAnimationFrame(tick)
       }
     }
 
     const tick = (now: number) => {
-      const p = Math.min(1, (now - startTime) / ms)
+      if (!startTime) startTime = now
+      const p = Math.max(0, Math.min(1, (now - startTime) / ms))
       const eased = p === 1 ? 1 : 1 - Math.pow(2, -10 * p)
       const cur = startVal + (value - startVal) * eased
       currentRef.current = cur

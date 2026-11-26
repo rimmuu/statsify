@@ -1,8 +1,8 @@
 'use client'
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, motion, type PanInfo } from 'framer-motion'
-import { PERSPECTIVE, ease, sheetSpring, tapPress, time, useMotionTier } from '@/lib/motion'
+import { AnimatePresence, motion, type PanInfo } from 'motion/react'
+import { PERSPECTIVE, easeDrawer, easeOut, sheetSpring, tapPress, time, useMotionTier } from '@/lib/motion'
 import { useSheetRecede } from './SpatialProvider'
 
 type Props = {
@@ -16,8 +16,6 @@ type Props = {
   onCancel: () => void
 }
 
-// Spatial confirmation dialog: gesture-dismissible bottom sheet on phones, 3D floating card on desktop.
-// Recedes the underlying app shell smoothly while open and traps keyboard focus cleanly.
 export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel, danger = false, onConfirm, onCancel }: Props) {
   const id = useId()
   const tier = useMotionTier()
@@ -70,7 +68,7 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel, da
   }, [open])
 
   const handleDragEnd = (_: MouseEvent | TouchEvent | PointerEvent, info: PanInfo) => {
-    if (info.offset.y > 88 || info.velocity.y > 480) onCancel()
+    if (info.offset.y > 88 || info.velocity.y > 460) onCancel()
   }
 
   if (!mounted) return null
@@ -86,9 +84,9 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel, da
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          transition={{ duration: 0.18, ease }}
+          transition={{ duration: 0.18, ease: easeOut }}
         >
-          <div aria-hidden className="absolute inset-0 bg-black/[0.72]" onClick={onCancel} />
+          <div aria-hidden className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onCancel} />
           <motion.div
             role="alertdialog"
             aria-modal="true"
@@ -96,37 +94,41 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel, da
             aria-describedby={`${id}-b`}
             drag={mobile && tier !== 'reduced' ? 'y' : false}
             dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={{ top: 0.06, bottom: 0.4 }}
+            dragElastic={{ top: 0.05, bottom: 0.4 }}
             onDragEnd={handleDragEnd}
-            className="card relative z-10 w-full space-y-3 rounded-b-none rounded-t-3xl pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-w-sm sm:rounded-2xl sm:pb-5"
+            className="relative z-10 w-full space-y-4 rounded-t-[24px] border border-white/[0.12] bg-[#121215] p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom,0px))] shadow-2xl sm:max-w-sm sm:rounded-[20px] sm:pb-6"
             initial={
               mobile
                 ? { y: '100%', opacity: 0.9 }
                 : spatial
-                  ? { opacity: 0, y: 18, z: -56, rotateX: 4, scale: 0.96 }
-                  : { opacity: 0, y: 14, scale: 0.97 }
+                  ? { opacity: 0, y: 16, z: -50, rotateX: 3.5, scale: 0.96 }
+                  : { opacity: 0, y: 12, scale: 0.965 }
             }
             animate={{ opacity: 1, y: 0, z: 0, rotateX: 0, scale: 1 }}
             exit={
               mobile
-                ? { y: '100%', opacity: 0.7, transition: { duration: 0.24, ease } }
+                ? { y: '100%', opacity: 0.7, transition: { duration: 0.22, ease: easeDrawer } }
                 : spatial
-                  ? { opacity: 0, y: 10, z: -40, rotateX: 3, scale: 0.97, transition: { duration: 0.2, ease } }
-                  : { opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.16, ease } }
+                  ? { opacity: 0, y: 10, z: -36, rotateX: 2.5, scale: 0.97, transition: { duration: 0.18, ease: easeOut } }
+                  : { opacity: 0, y: 8, scale: 0.98, transition: { duration: 0.15, ease: easeOut } }
             }
-            transition={mobile ? sheetSpring : { duration: time.sheet, ease }}
+            transition={mobile ? sheetSpring : { duration: time.sheet, ease: easeOut }}
           >
             <div aria-hidden className="mx-auto mb-1 h-1 w-10 rounded-full bg-white/20 sm:hidden" />
-            <h2 id={`${id}-t`} className="text-lg font-semibold text-white">{title}</h2>
-            <p id={`${id}-b`} className="text-sm leading-6 text-neutral-300">{body}</p>
+            <h2 id={`${id}-t`} className="font-editorial text-2xl text-[#F5F5F5]">
+              {title}
+            </h2>
+            <p id={`${id}-b`} className="text-sm leading-relaxed text-[#999999]">
+              {body}
+            </p>
             <div className="flex justify-end gap-2 pt-2">
               <motion.button
                 ref={cancelBtn}
                 type="button"
                 onClick={onCancel}
                 whileTap={tapPress}
-                transition={{ duration: time.micro, ease }}
-                className="min-h-[44px] rounded-xl bg-white/[0.06] px-4 py-2 text-sm text-neutral-200 transition-colors hover:bg-white/[0.12]"
+                transition={{ duration: time.micro, ease: easeOut }}
+                className="min-h-[44px] rounded-full border border-white/10 bg-white/[0.06] px-4 text-sm font-medium text-[#F5F5F5] hover:bg-white/[0.12]"
               >
                 {cancelLabel}
               </motion.button>
@@ -135,8 +137,12 @@ export function ConfirmDialog({ open, title, body, confirmLabel, cancelLabel, da
                 type="button"
                 onClick={onConfirm}
                 whileTap={tapPress}
-                transition={{ duration: time.micro, ease }}
-                className={`min-h-[44px] rounded-xl px-4 py-2 text-sm font-semibold transition-colors ${danger ? 'bg-accent/20 text-accent-soft hover:bg-accent/30' : 'bg-white text-black hover:bg-neutral-200'}`}
+                transition={{ duration: time.micro, ease: easeOut }}
+                className={`min-h-[44px] rounded-full px-5 text-sm font-semibold ${
+                  danger
+                    ? 'bg-[#FA334F] text-white hover:bg-[#ff4b64]'
+                    : 'bg-[#F5F5F5] text-[#080808] hover:bg-white'
+                }`}
               >
                 {confirmLabel}
               </motion.button>

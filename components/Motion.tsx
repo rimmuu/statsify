@@ -1,9 +1,9 @@
 'use client'
 import { forwardRef, type ReactNode } from 'react'
-import { MotionConfig, motion, useMotionValue, useSpring, useTransform, type HTMLMotionProps } from 'framer-motion'
+import { MotionConfig, motion, useMotionValue, useSpring, useTransform, type HTMLMotionProps } from 'motion/react'
 import {
   containerV,
-  ease,
+  easeOut,
   magneticSpring,
   riseV,
   spring,
@@ -14,12 +14,10 @@ import {
   useMotionTier,
 } from '@/lib/motion'
 
-// Honours the OS "reduce motion" setting globally across all Framer Motion components.
 export function MotionRoot({ children }: { children: ReactNode }) {
   return <MotionConfig reducedMotion="user">{children}</MotionConfig>
 }
 
-// Crisp entrance for a section or block; `delay` is in seconds. Never uses scroll IntersectionObservers.
 export function FadeIn({ children, className, delay = 0 }: { children: ReactNode; className?: string; delay?: number }) {
   return (
     <motion.div className={className} variants={riseV} initial="hidden" animate="show" custom={delay}>
@@ -28,7 +26,6 @@ export function FadeIn({ children, className, delay = 0 }: { children: ReactNode
   )
 }
 
-// Small stat/metric grids: children stagger once on initial appearance without replaying on filter switches.
 export function StaggerContainer({ children, className }: { children: ReactNode; className?: string }) {
   return (
     <motion.div className={className} variants={containerV} initial="hidden" animate="show">
@@ -37,23 +34,24 @@ export function StaggerContainer({ children, className }: { children: ReactNode;
   )
 }
 
-// Immediate tactile depth-press button (140ms micro-interaction, never delays click events).
-export const AnimatedButton = forwardRef<HTMLButtonElement, HTMLMotionProps<'button'>>(function AnimatedButton({ disabled, ...rest }, ref) {
+export const AnimatedButton = forwardRef<HTMLButtonElement, HTMLMotionProps<'button'>>(function AnimatedButton(
+  { disabled, ...rest },
+  ref,
+) {
   return (
     <motion.button
       ref={ref}
       type="button"
       disabled={disabled}
-      whileHover={disabled ? undefined : { y: -1 }}
       whileTap={disabled ? undefined : tapPress}
-      transition={{ duration: time.micro, ease }}
+      transition={{ duration: time.micro, ease: easeOut }}
       {...rest}
     />
   )
 })
 
-// Desktop-only magnetic pointer attraction (strictly fine pointers + full motion tier; zero React re-renders).
-export function Magnetic({ children, className = '', strength = 4.5 }: { children: ReactNode; className?: string; strength?: number }) {
+// Desktop-only magnetic attraction (fine pointers + full motion tier; zero React re-renders).
+export function Magnetic({ children, className = '', strength = 4 }: { children: ReactNode; className?: string; strength?: number }) {
   const fine = useFinePointer()
   const tier = useMotionTier()
   const mx = useMotionValue(0)
@@ -83,8 +81,8 @@ export function Magnetic({ children, className = '', strength = 4.5 }: { childre
   )
 }
 
-// Pointer-following 3D depth tilt: strictly desktop fine pointers + full motion tier, zero React re-renders.
-export function Tilt({ children, className = '', max = 4.5 }: { children: ReactNode; className?: string; max?: number }) {
+// Restrained pointer-following depth tilt (strictly desktop fine pointers, zero React re-renders).
+export function Tilt({ children, className = '', max = 3.5 }: { children: ReactNode; className?: string; max?: number }) {
   const fine = useFinePointer()
   const tier = useMotionTier()
   const x = useMotionValue(0)
@@ -112,24 +110,25 @@ export function Tilt({ children, className = '', max = 4.5 }: { children: ReactN
   )
 }
 
-// Loading shimmer placeholder (compositor translateX only, pauses automatically when hidden or reduced-motion).
 export const Skeleton = ({ className = '' }: { className?: string }) => <div aria-hidden className={`skeleton ${className}`} />
 
 export function PageSkeleton({ label }: { label: string }) {
   return (
-    <div role="status" aria-label={label} className="mx-auto max-w-5xl space-y-6">
-      <Skeleton className="h-8 w-48" />
-      <Skeleton className="h-40 w-full" />
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        {Array.from({ length: 8 }, (_, i) => (
-          <Skeleton key={i} className="h-24" />
+    <div role="status" aria-label={label} className="space-y-8 py-4">
+      <div className="flex items-end justify-between gap-4">
+        <Skeleton className="h-12 w-52" />
+        <Skeleton className="h-10 w-64 !rounded-full" />
+      </div>
+      <Skeleton className="h-64 w-full !rounded-2xl" />
+      <div className="grid grid-cols-2 gap-6 border-t border-white/[0.08] pt-6 md:grid-cols-4">
+        {Array.from({ length: 4 }, (_, i) => (
+          <Skeleton key={i} className="h-20" />
         ))}
       </div>
     </div>
   )
 }
 
-// Accessible spring toggle switch.
 export function Switch({ checked, onChange, label }: { checked: boolean; onChange: (on: boolean) => void; label: string }) {
   return (
     <button
@@ -138,9 +137,15 @@ export function Switch({ checked, onChange, label }: { checked: boolean; onChang
       aria-checked={checked}
       aria-label={label}
       onClick={() => onChange(!checked)}
-      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${checked ? 'bg-accent' : 'bg-neutral-700'}`}
+      className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-200 ${
+        checked ? 'bg-[#FA334F]' : 'bg-white/15'
+      }`}
     >
-      <motion.span layout transition={spring} className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow ${checked ? 'right-1' : 'left-1'}`} />
+      <motion.span
+        layout
+        transition={spring}
+        className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow ${checked ? 'right-1' : 'left-1'}`}
+      />
     </button>
   )
 }

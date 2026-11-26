@@ -1,12 +1,10 @@
 'use client'
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
-import { AnimatePresence, motion } from 'framer-motion'
-import { ease, time, useMotionTier } from '@/lib/motion'
+import { AnimatePresence, motion } from 'motion/react'
+import { ChevronDown } from 'lucide-react'
+import { easeOut, time, useMotionTier } from '@/lib/motion'
 import { AnimatedButton } from './Motion'
 
-
-// Spatial combobox popover: unfolds with 3D perspective depth from top-right transform origin,
-// full keyboard support (Arrow keys, Enter, Escape), zero heavy backdrop-filter lag.
 export default function Dropdown<V extends string | number>({
   value,
   options,
@@ -41,6 +39,7 @@ export default function Dropdown<V extends string | number>({
     document.addEventListener('mousedown', away)
     return () => document.removeEventListener('mousedown', away)
   }, [open])
+
   const key = (e: KeyboardEvent) => {
     if (!open) {
       if (['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) {
@@ -77,18 +76,12 @@ export default function Dropdown<V extends string | number>({
         aria-activedescendant={open ? `${id}-${cur}` : undefined}
         onClick={() => (open ? setOpen(false) : show())}
         onKeyDown={key}
-        className="flex min-h-[44px] items-center gap-2 rounded-xl border border-white/10 bg-[#141418] px-3 py-2 text-sm text-neutral-100 shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition-colors hover:border-white/20 sm:min-h-0"
+        className="flex min-h-[42px] items-center gap-2 rounded-full border border-white/[0.1] bg-[#141417] px-3.5 py-2 text-[13px] font-medium text-[#F5F5F5] transition-colors hover:border-white/20"
       >
         <span className="truncate">{options[at]?.l}</span>
-        <motion.svg
-          aria-hidden
-          viewBox="0 0 20 20"
-          className="h-4 w-4 shrink-0 text-neutral-400"
-          animate={{ rotate: open ? 180 : 0 }}
-          transition={{ duration: time.micro, ease }}
-        >
-          <path d="M5 8l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        </motion.svg>
+        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: time.micro, ease: easeOut }}>
+          <ChevronDown className="h-3.5 w-3.5 text-[#999999]" aria-hidden />
+        </motion.span>
       </AnimatedButton>
       <AnimatePresence>
         {open && (
@@ -97,12 +90,12 @@ export default function Dropdown<V extends string | number>({
             id={id}
             role="listbox"
             aria-label={label}
-            initial={spatial ? { opacity: 0, y: -8, scale: 0.95, rotateX: -12 } : { opacity: 0, y: -6, scale: 0.97 }}
+            initial={spatial ? { opacity: 0, y: -6, scale: 0.96, rotateX: -10 } : { opacity: 0, y: -5, scale: 0.96 }}
             animate={{ opacity: 1, y: 0, scale: 1, rotateX: 0 }}
-            exit={spatial ? { opacity: 0, y: -6, scale: 0.96, rotateX: -8 } : { opacity: 0, y: -4, scale: 0.97 }}
-            transition={{ duration: 0.18, ease }}
+            exit={spatial ? { opacity: 0, y: -5, scale: 0.96, rotateX: -6 } : { opacity: 0, y: -4, scale: 0.96 }}
+            transition={{ duration: 0.16, ease: easeOut }}
             style={{ transformOrigin: 'top right' }}
-            className="absolute right-0 z-30 mt-2 min-w-full overflow-hidden rounded-xl border border-white/[0.12] bg-[#16161b] p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.12),0_22px_50px_-12px_rgba(0,0,0,0.88)]"
+            className="absolute right-0 z-30 mt-2 min-w-[168px] overflow-hidden rounded-2xl border border-white/[0.12] bg-[#141418] p-1.5 shadow-[0_24px_56px_-12px_rgba(0,0,0,0.92)]"
           >
             {options.map((o, i) => (
               <li
@@ -113,7 +106,9 @@ export default function Dropdown<V extends string | number>({
                 onMouseEnter={() => setCur(i)}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => choose(i)}
-                className={`cursor-pointer whitespace-nowrap rounded-lg px-3 py-2 text-sm transition-colors ${i === cur ? 'bg-white/[0.08] text-white' : 'text-neutral-300'} ${o.v === value ? 'font-semibold text-accent-soft' : ''}`}
+                className={`cursor-pointer whitespace-nowrap rounded-xl px-3 py-2 text-[13px] transition-colors ${
+                  i === cur ? 'bg-white/[0.08] text-[#F5F5F5]' : 'text-[#999999]'
+                } ${o.v === value ? 'font-semibold text-[#FA334F]' : ''}`}
               >
                 {o.l}
               </li>

@@ -1,8 +1,8 @@
 'use client'
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { motion } from 'framer-motion'
-import { PERSPECTIVE, ease, time, useMotionTier, usePageVisible } from '@/lib/motion'
+import { motion } from 'motion/react'
+import { PERSPECTIVE, easeCine, time, useMotionTier, usePageVisible } from '@/lib/motion'
 
 export type ArtRect = { left: number; top: number; width: number; height: number }
 
@@ -31,21 +31,21 @@ type ActiveFlight = {
 }
 
 type SpatialCtx = {
-  // Ambient lighting
   setAmbient: (rgb: string) => void
-  // Background recession when a bottom sheet or modal is open
   sheetDepth: number
   pushSheet: () => void
   popSheet: () => void
-  // Apple Music-style shared-element 3D artwork flight
-  captureArtwork: (meta: Omit<FlightMeta, 'fromRadius' | 'toRadius'> & { radius?: number }, el: HTMLElement | null, direction?: 'forward' | 'reverse') => void
+  captureArtwork: (
+    meta: Omit<FlightMeta, 'fromRadius' | 'toRadius'> & { radius?: number },
+    el: HTMLElement | null,
+    direction?: 'forward' | 'reverse',
+  ) => void
   claimArtworkTarget: (id: string, el: HTMLElement | null, targetRadius?: number) => boolean
   flyingId: string | null
-  // Visibility & capability
   pageVisible: boolean
 }
 
-const DEFAULT_AMB: [number, number, number] = [215, 44, 66]
+const DEFAULT_AMB: [number, number, number] = [250, 51, 79]
 const Ctx = createContext<SpatialCtx | null>(null)
 
 export function useSpatial() {
@@ -54,7 +54,6 @@ export function useSpatial() {
   return ctx
 }
 
-// Smoothly drives global ambient background lighting from an extracted artwork RGB string ("r g b").
 export function useAmbientLight(rgb: string) {
   const { setAmbient } = useSpatial()
   useEffect(() => {
@@ -64,7 +63,6 @@ export function useAmbientLight(rgb: string) {
   }, [rgb, setAmbient])
 }
 
-// Registers an open modal or bottom sheet so the underlying app shell smoothly recedes in 3D depth.
 export function useSheetRecede(open: boolean) {
   const { pushSheet, popSheet } = useSpatial()
   useEffect(() => {
@@ -81,8 +79,6 @@ function measureVisual(el: HTMLElement): ArtRect | null {
   return { left: r.left, top: r.top, width: r.width, height: r.height }
 }
 
-// Walks offsetParent so the target's exact settled viewport coordinates are read even while an
-// ancestor SpatialStage is mid-3D-entry (offsetLeft/Top/Width/Height ignore CSS transforms).
 function measureSettled(el: HTMLElement): ArtRect | null {
   const width = el.offsetWidth
   const height = el.offsetHeight
@@ -117,7 +113,6 @@ export function SpatialProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => setMounted(true), [])
 
-  // Ambient colour CSS @property updates (off-main-thread compositor interpolation)
   const setAmbient = useCallback((rgb: string) => {
     if (typeof document === 'undefined') return
     const root = document.documentElement
@@ -141,7 +136,7 @@ export function SpatialProvider({ children }: { children: ReactNode }) {
       if (tier === 'reduced' || !el) return
       const from = measureVisual(el)
       if (!from) return
-      const fromRadius = readRadius(el, meta.radius ?? 12)
+      const fromRadius = readRadius(el, meta.radius ?? 10)
       pendingRef.current = {
         meta: { ...meta, fromRadius, toRadius: fromRadius },
         from,
@@ -152,40 +147,34 @@ export function SpatialProvider({ children }: { children: ReactNode }) {
     [tier],
   )
 
-  const claimArtworkTarget = useCallback(
-    (id: string, el: HTMLElement | null, targetRadius?: number): boolean => {
-      const pending = pendingRef.current
-      if (!pending || pending.meta.id !== id || !el) return false
-      // Expire stale captures (> 1.4s old) so unrelated later mounts never trigger unexpected flights.
-      if (performance.now() - pending.capturedAt > 1400) {
-        pendingRef.current = null
-        return false
-      }
-      const to = measureSettled(el)
+  const claimArtworkTarget = useCallback((id: string, el: HTMLElement | null, targetRadius?: number): boolean => {
+    const pending = pendingRef.current
+    if (!pending || pending.meta.id !== id || !el) return false
+    if (performance.now() - pending.capturedAt > 1400) {
       pendingRef.current = null
-      if (!to) return false
-      const toRadius = readRadius(el, targetRadius ?? 16)
-      // If geometry barely changed, skip flight to prevent micro-jitter.
-      const dist = Math.hypot(to.left - pending.from.left, to.top - pending.from.top) + Math.abs(to.width - pending.from.width)
-      if (dist < 12) return false
-      const key = ++seqRef.current
-      setActive({
-        key,
-        meta: { ...pending.meta, toRadius },
-        from: pending.from,
-        to,
-        direction: pending.direction,
-      })
-      return true
-    },
-    [],
-  )
+      return false
+    }
+    const to = measureSettled(el)
+    pendingRef.current = null
+    if (!to) return false
+    const toRadius = readRadius(el, targetRadius ?? 14)
+    const dist = Math.hypot(to.left - pending.from.left, to.top - pending.from.top) + Math.abs(to.width - pending.from.width)
+    if (dist < 12) return false
+    const key = ++seqRef.current
+    setActive({
+      key,
+      meta: { ...pending.meta, toRadius },
+      from: pending.from,
+      to,
+      direction: pending.direction,
+    })
+    return true
+  }, [])
 
   const finishFlight = useCallback((key: number) => {
     setActive((cur) => (cur && cur.key === key ? null : cur))
   }, [])
 
-  // Safety timeout: never leave a destination artwork hidden if an animation is interrupted.
   useEffect(() => {
     if (!active) return
     const t = setTimeout(() => finishFlight(active.key), 720)
@@ -209,22 +198,21 @@ export function SpatialProvider({ children }: { children: ReactNode }) {
   return (
     <Ctx.Provider value={value}>
       {children}
-      {mounted && active && <ArtworkFlightOverlay flight={active} spatial={tier === 'full'} onDone={() => finishFlight(active.key)} />}
+      {mounted && active && (
+        <ArtworkFlightOverlay flight={active} spatial={tier === 'full'} onDone={() => finishFlight(active.key)} />
+      )}
     </Ctx.Provider>
   )
 }
 
-// Single physical 3D artwork layer that lifts off its source geometry, arcs cleanly through perspective Z-space,
-// corrects rotation subtly based on trajectory, and lands seamlessly into the destination artwork slot.
 function ArtworkFlightOverlay({ flight, spatial, onDone }: { flight: ActiveFlight; spatial: boolean; onDone: () => void }) {
   const { from, to, meta, direction } = flight
   const dx = to.left + to.width / 2 - (from.left + from.width / 2)
   const dy = to.top + to.height / 2 - (from.top + from.height / 2)
   const dirX = Math.max(-1, Math.min(1, dx / 220))
   const dirY = Math.max(-1, Math.min(1, dy / 220))
-  const dur = direction === 'forward' ? time.detail : 0.38
+  const dur = direction === 'forward' ? time.detail : 0.36
 
-  // Animate strictly on the compositor by sizing at the larger endpoint and scaling/translating via GPU transform.
   const sx = from.width / to.width
   const sy = from.height / to.height
   const startX = from.left + from.width / 2 - (to.left + to.width / 2)
@@ -253,8 +241,8 @@ function ArtworkFlightOverlay({ flight, spatial, onDone }: { flight: ActiveFligh
           width: to.width,
           height: to.height,
           overflow: 'hidden',
-          background: `linear-gradient(135deg, hsl(${meta.hue} 34% 26%), hsl(${(meta.hue + 32) % 360} 38% 13%))`,
-          boxShadow: '0 26px 64px -14px rgba(0, 0, 0, 0.85), 0 0 0 1px rgba(255, 255, 255, 0.16)',
+          background: `linear-gradient(135deg, hsl(${meta.hue} 28% 22%), hsl(${(meta.hue + 28) % 360} 32% 11%))`,
+          boxShadow: '0 28px 70px -14px rgba(0, 0, 0, 0.9), 0 0 0 1px rgba(255, 255, 255, 0.14)',
           transformOrigin: 'center center',
           backfaceVisibility: 'hidden',
         }}
@@ -271,7 +259,7 @@ function ArtworkFlightOverlay({ flight, spatial, onDone }: { flight: ActiveFligh
         animate={{
           x: 0,
           y: 0,
-          z: spatial ? [0, direction === 'forward' ? 84 : 58, 0] : 0,
+          z: spatial ? [0, direction === 'forward' ? 92 : 60, 0] : 0,
           scaleX: 1,
           scaleY: 1,
           rotateX: spatial ? [0, -dirY * 6.5, 0] : 0,
@@ -280,7 +268,7 @@ function ArtworkFlightOverlay({ flight, spatial, onDone }: { flight: ActiveFligh
         }}
         transition={{
           duration: dur,
-          ease,
+          ease: easeCine,
           z: { duration: dur, times: [0, 0.45, 1], ease: 'easeInOut' },
           rotateX: { duration: dur, times: [0, 0.42, 1], ease: 'easeInOut' },
           rotateY: { duration: dur, times: [0, 0.42, 1], ease: 'easeInOut' },
@@ -289,7 +277,7 @@ function ArtworkFlightOverlay({ flight, spatial, onDone }: { flight: ActiveFligh
       >
         <span
           className="art-letter"
-          style={{ fontSize: `${Math.max(16, Math.round(Math.min(to.width, to.height) * 0.34))}px` }}
+          style={{ fontSize: `${Math.max(16, Math.round(Math.min(to.width, to.height) * 0.36))}px` }}
         >
           {meta.name.charAt(0)}
         </span>

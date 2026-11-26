@@ -1,8 +1,9 @@
 'use client'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { animate, motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from 'framer-motion'
+import { animate, motion, useMotionValue, useMotionValueEvent, useTransform, type MotionValue } from 'motion/react'
+import { ChevronLeft, ChevronRight, Disc3 } from 'lucide-react'
 import { useI18n } from '@/lib/i18n'
-import { ease, flowSpring, tapPress, time, useMotionTier } from '@/lib/motion'
+import { easeOut, flickSpring, flowSpring, tapPress, time, useMotionTier } from '@/lib/motion'
 import type { Row } from '@/lib/stats'
 import Art, { ambient, useAccent, useArtSrc } from './Art'
 import ListenLinks from './ListenLinks'
@@ -16,10 +17,7 @@ type Props = {
 }
 
 const WINDOW = 4
-
-function clamp(v: number, lo: number, hi: number) {
-  return Math.max(lo, Math.min(hi, v))
-}
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v))
 
 function FlowCard({
   row,
@@ -55,8 +53,8 @@ function FlowCard({
   const z = useTransform(pos, (p) => {
     if (!spatial) return 0
     const ad = Math.abs(index - p)
-    if (ad <= 1) return 86 - ad * 158
-    return -72 - (ad - 1) * 44
+    if (ad <= 1) return 94 - ad * 168
+    return -74 - (ad - 1) * 48
   })
 
   const rotateY = useTransform(pos, (p) => {
@@ -65,18 +63,18 @@ function FlowCard({
     const ad = Math.abs(d)
     if (ad < 0.01) return 0
     const sign = d < 0 ? 1 : -1
-    const angle = ad <= 1 ? ad * 42 : Math.min(52, 42 + (ad - 1) * 5)
+    const angle = ad <= 1 ? ad * 44 : Math.min(54, 44 + (ad - 1) * 5)
     return sign * angle
   })
 
   const scale = useTransform(pos, (p) => {
     const ad = Math.abs(index - p)
-    return Math.max(0.7, 1 - ad * 0.11)
+    return Math.max(0.68, 1 - ad * 0.12)
   })
 
   const opacity = useTransform(pos, (p) => {
     const ad = Math.abs(index - p)
-    return Math.max(0, 1 - ad * 0.25)
+    return Math.max(0, 1 - ad * 0.24)
   })
 
   const isCenter = index === activeIndex
@@ -102,40 +100,40 @@ function FlowCard({
         type="button"
         onClick={() => (isCenter ? onInspect(row) : onFocus(index))}
         aria-label={`${index + 1}. ${row.name} — ${row.sub}`}
-        className={`group relative block h-full w-full overflow-hidden rounded-2xl text-left transition-shadow duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent ${
+        className={`group relative block h-full w-full overflow-hidden rounded-[18px] text-left transition-shadow duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#FA334F] ${
           isCenter
-            ? 'ring-1 ring-white/25 shadow-[0_32px_70px_-14px_rgba(0,0,0,0.92)]'
-            : 'ring-1 ring-white/10 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.8)]'
+            ? 'ring-1 ring-white/25 shadow-[0_34px_76px_-14px_rgba(0,0,0,0.95)]'
+            : 'ring-1 ring-white/10 shadow-[0_18px_40px_-12px_rgba(0,0,0,0.85)]'
         }`}
       >
-        <Art fill eager u={row.uri} name={row.name} zoom={false} cls="h-full w-full rounded-2xl" />
+        <Art fill eager u={row.uri} name={row.name} zoom={false} cls="h-full w-full rounded-[18px]" />
         <div aria-hidden className="cf-specular" />
-        <span className="absolute left-2.5 top-2.5 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-white ring-1 ring-white/15">
-          #{index + 1}
+        <span className="absolute left-2.5 top-2.5 rounded-full bg-[#080808]/75 px-2.5 py-0.5 font-mono text-[11px] font-semibold tabular-nums text-[#F5F5F5] ring-1 ring-white/15 backdrop-blur-md">
+          {String(index + 1).padStart(2, '0')}
         </span>
       </button>
     </motion.div>
   )
 }
 
-// Interactive 3D Cover Flow album showcase:
-// Virtualized (+/- 4 window -> max 9 DOM elements), continuous MotionValue drag + momentum + spring snap,
-// native vertical scroll preserved (`touch-action: pan-y`), and live dominant-color studio ambient lighting.
 export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
   const { t, pct, hm } = useI18n()
   const tier = useMotionTier()
   const stageRef = useRef<HTMLDivElement>(null)
   const pos = useMotionValue(0)
   const [active, setActive] = useState(0)
-  const [stageWidth, setStageWidth] = useState(720)
+  const [stageWidth, setStageWidth] = useState(760)
   const animRef = useRef<ReturnType<typeof animate> | null>(null)
   const wheelAccum = useRef(0)
   const wheelTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  useEffect(() => () => {
-    animRef.current?.stop()
-    if (wheelTimer.current) clearTimeout(wheelTimer.current)
-  }, [])
+  useEffect(
+    () => () => {
+      animRef.current?.stop()
+      if (wheelTimer.current) clearTimeout(wheelTimer.current)
+    },
+    [],
+  )
 
   const maxIdx = Math.max(0, rows.length - 1)
   const safeActive = Math.min(active, maxIdx)
@@ -144,7 +142,6 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
   const rgb = useAccent(artSrc)
   useAmbientLight(rgb)
 
-  // Keep active index clamped when filter/limit shrinks the list.
   useEffect(() => {
     if (pos.get() > maxIdx) {
       pos.set(maxIdx)
@@ -155,7 +152,7 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
   useEffect(() => {
     const el = stageRef.current
     if (!el) return
-    const sync = () => setStageWidth(el.clientWidth || 720)
+    const sync = () => setStageWidth(el.clientWidth || 760)
     sync()
     const ro = new ResizeObserver(sync)
     ro.observe(el)
@@ -168,7 +165,7 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
   })
 
   const snapTo = useCallback(
-    (target: number) => {
+    (target: number, momentum = false) => {
       const clamped = clamp(Math.round(target), 0, maxIdx)
       setActive(clamped)
       animRef.current?.stop()
@@ -176,18 +173,16 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
         pos.set(clamped)
         return
       }
-      animRef.current = animate(pos, clamped, flowSpring)
+      animRef.current = animate(pos, clamped, momentum ? flickSpring : flowSpring)
     },
     [maxIdx, pos, tier],
   )
 
-  // Responsive card dimensions keeping artwork sharp and legible on both phones and desktops.
-  const cardSize = Math.round(clamp(stageWidth * 0.34, 176, 256))
+  const cardSize = Math.round(clamp(stageWidth * 0.34, 184, 276))
   const spread = Math.round(cardSize * 0.68)
   const wingStep = Math.round(cardSize * 0.36)
   const dragStepPx = Math.max(110, cardSize * 0.62)
 
-  // Pointer/touch swipe with velocity momentum & strict horizontal intent lock (never hijacks vertical scroll).
   const drag = useRef({
     down: false,
     locked: null as null | 'h' | 'v',
@@ -239,15 +234,15 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
     }
     const now = performance.now()
     const dt = Math.max(8, now - d.lastT)
-    const instVel = ((e.clientX - d.lastX) / dt) * 1000 // px/s
+    const instVel = ((e.clientX - d.lastX) / dt) * 1000
     d.vel = d.vel * 0.4 + instVel * 0.6
     d.lastX = e.clientX
     d.lastT = now
 
     let raw = d.startPos - dx / dragStepPx
-    // Soft rubber-band resistance past ends
-    if (raw < 0) raw *= 0.28
-    else if (raw > maxIdx) raw = maxIdx + (raw - maxIdx) * 0.28
+    // Soft rubber-banding past bounds
+    if (raw < 0) raw *= 0.25
+    else if (raw > maxIdx) raw = maxIdx + (raw - maxIdx) * 0.25
     pos.set(raw)
   }
 
@@ -256,12 +251,11 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
     if (!d.down) return
     d.down = false
     if (d.locked === 'h') {
-      const momentumOffset = -(d.vel / dragStepPx) * 0.16
-      snapTo(pos.get() + clamp(momentumOffset, -3, 3))
+      const projected = -(d.vel / dragStepPx) * 0.17
+      snapTo(pos.get() + clamp(projected, -3, 3), true)
     }
   }
 
-  // Horizontal trackpad/wheel support without ever intercepting vertical scroll
   const onWheel = (e: React.WheelEvent<HTMLDivElement>) => {
     if (Math.abs(e.deltaX) <= Math.abs(e.deltaY) * 1.2 || Math.abs(e.deltaX) < 4) return
     wheelAccum.current += e.deltaX
@@ -271,7 +265,9 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
       snapTo(safeActive + step)
     }
     if (wheelTimer.current) clearTimeout(wheelTimer.current)
-    wheelTimer.current = setTimeout(() => { wheelAccum.current = 0 }, 160)
+    wheelTimer.current = setTimeout(() => {
+      wheelAccum.current = 0
+    }, 160)
   }
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -298,7 +294,7 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
   const spatial = tier !== 'reduced'
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 sm:space-y-6">
       <div
         ref={stageRef}
         tabIndex={0}
@@ -318,15 +314,16 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
             e.preventDefault()
           }
         }}
-        className="cf-stage amb rounded-3xl border border-white/[0.08] bg-[#0d0d11]/90 outline-none focus-visible:ring-2 focus-visible:ring-accent"
+        className="cf-stage amb rounded-[24px] border border-white/[0.08] bg-[#0B0B0D] outline-none focus-visible:ring-2 focus-visible:ring-[#FA334F]"
         style={ambient(rgb)}
       >
-        {/* Subtle radial studio spotlight underneath center album (no fake mirror reflections) */}
+        {/* Studio floor illumination */}
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-28"
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-32"
           style={{
-            background: 'radial-gradient(50% 90% at 50% 100%, rgb(var(--ar) var(--ag) var(--ab) / 0.22), transparent 72%)',
+            background:
+              'radial-gradient(52% 95% at 50% 100%, rgb(var(--ar) var(--ag) var(--ab) / 0.25), transparent 72%)',
           }}
         />
 
@@ -347,72 +344,68 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
         ))}
       </div>
 
-      {/* Focused album info panel + tactile stepper */}
-      <div className="card flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      {/* Focused Record Metadata & Controls */}
+      <div className="flex flex-col gap-5 border-y border-white/[0.08] py-5 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0 flex-1">
           <motion.div
             key={focused.key}
-            initial={{ opacity: 0, y: 5 }}
+            initial={{ opacity: 0.55, y: 3 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.18, ease }}
-            className="min-w-0"
+            transition={{ duration: 0.16, ease: easeOut }}
+            className="min-w-0 space-y-1"
           >
-            <div className="flex items-center gap-2 text-xs text-neutral-400">
-              <span className="rounded-full bg-accent/15 px-2 py-0.5 font-semibold tabular-nums text-accent-soft">
-                #{safeActive + 1} / {rows.length}
+            <div className="flex items-center gap-2 font-mono text-xs text-[#999999]">
+              <span className="text-[#FA334F]">
+                {String(safeActive + 1).padStart(2, '0')} / {String(rows.length).padStart(2, '0')}
               </span>
+              <span>·</span>
               <span className="truncate">{focused.sub}</span>
               <span>·</span>
               <span className="shrink-0">{t('n.tracks', { n: focused.tracks })}</span>
             </div>
-            <h2 className="mt-1.5 truncate text-xl font-semibold tracking-tight text-white">{focused.name}</h2>
-            <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums text-neutral-400">
-              <span className="font-medium text-neutral-200">{hm(focused.ms)} · {share}%</span>
-              <span>{t('n.plays', { n: focused.plays })} · {t('n.streams', { n: focused.streams })}</span>
-            </div>
+            <h2 className="display-editorial truncate text-3xl text-[#F5F5F5] sm:text-4xl">{focused.name}</h2>
+            <p className="font-mono text-xs tabular-nums text-[#999999]">
+              <span className="text-[#F5F5F5]">{hm(focused.ms)}</span> · {share}% · {t('n.plays', { n: focused.plays })}
+            </p>
           </motion.div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2.5">
           <ListenLinks compact item={{ kind: 'album', name: focused.name, artist: focused.sub }} />
           <AnimatedButton
             onClick={() => onInspect(focused)}
-            className="min-h-[40px] rounded-full border border-white/[0.12] bg-white/[0.06] px-3.5 py-1.5 text-xs font-medium text-white transition-colors hover:bg-white/[0.12]"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-full bg-[#F5F5F5] px-4 text-xs font-semibold text-[#080808] hover:bg-white"
           >
-            {t('al.inspect')}
+            <Disc3 className="h-4 w-4 text-[#FA334F]" aria-hidden />
+            <span>{t('al.inspect')}</span>
           </AnimatedButton>
-          <div className="ml-auto flex items-center gap-1 sm:ml-0">
+          <div className="ml-auto flex items-center gap-1.5 sm:ml-0">
             <motion.button
               type="button"
               aria-label={t('al.prev')}
               disabled={safeActive === 0}
               whileTap={safeActive === 0 ? undefined : tapPress}
-              transition={{ duration: time.micro, ease }}
+              transition={{ duration: time.micro, ease: easeOut }}
               onClick={() => snapTo(safeActive - 1)}
-              className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white transition-colors hover:bg-white/[0.12] disabled:opacity-30"
+              className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-[#141417] text-[#F5F5F5] hover:bg-white/[0.1] disabled:opacity-30"
             >
-              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M15 5l-7 7 7 7" />
-              </svg>
+              <ChevronLeft className="h-4 w-4" aria-hidden />
             </motion.button>
             <motion.button
               type="button"
               aria-label={t('al.next')}
               disabled={safeActive >= maxIdx}
               whileTap={safeActive >= maxIdx ? undefined : tapPress}
-              transition={{ duration: time.micro, ease }}
+              transition={{ duration: time.micro, ease: easeOut }}
               onClick={() => snapTo(safeActive + 1)}
-              className="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[0.05] text-white transition-colors hover:bg-white/[0.12] disabled:opacity-30"
+              className="grid h-11 w-11 place-items-center rounded-full border border-white/10 bg-[#141417] text-[#F5F5F5] hover:bg-white/[0.1] disabled:opacity-30"
             >
-              <svg viewBox="0 0 24 24" aria-hidden className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 5l7 7-7 7" />
-              </svg>
+              <ChevronRight className="h-4 w-4" aria-hidden />
             </motion.button>
           </div>
         </div>
       </div>
 
-      {/* Scrubbing range slider for effortless jumping across large album collections */}
       {rows.length > 1 && (
         <div className="px-1">
           <input
@@ -423,7 +416,7 @@ export default function CoverFlow({ rows, totalMs, onInspect }: Props) {
             value={safeActive}
             aria-label={t('al.flow')}
             onChange={(e) => snapTo(Number(e.target.value))}
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-[#e5384b]"
+            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/10 accent-[#FA334F]"
           />
         </div>
       )}
