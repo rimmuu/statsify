@@ -1,5 +1,5 @@
 // Everything the Wrapped story shows, computed from real plays with the same helpers the other pages use.
-import { activity, group, type Rec, type Row } from './stats'
+import { activity, group, monthly, type Rec, type Row } from './stats'
 
 export type WrappedData = {
   plays: number
@@ -19,6 +19,8 @@ export type WrappedData = {
   peakDay: number
   streak: number
   activeDays: number
+  months: { k: string; h: number }[]
+  peakMonth?: { k: string; h: number }
 }
 
 export const yearsIn = (all: Rec[]): number[] => [...new Set(all.map((r) => new Date(r.ts).getFullYear()))].sort((a, b) => b - a)
@@ -38,10 +40,16 @@ export function buildWrapped(list: Rec[]): WrappedData {
     if (r.ts > hi) hi = r.ts
   }
   const act = activity(list)
+  const totals = [...monthly(list)].sort(([a], [b]) => a.localeCompare(b))
+  const mList = totals.map(([k, value]) => ({ k, h: +(value / 3.6e6).toFixed(1) }))
+  const peakIndex = totals.reduce((best, month, i) => month[1] > totals[best][1] ? i : best, 0)
+  const peakMonth = mList[peakIndex]
   return {
     plays: list.length, streams, ms, tracks: tr.length, artists: ar.length, albums: al.length, lo, hi,
     artist: ar[0], artistShare: ms && ar[0] ? (ar[0].ms / ms) * 100 : 0,
     topTracks: tr.slice(0, 5), topAlbums: al.slice(0, 3),
     hours: act.hours, peakHour: peakOf(act.hours), peakDay: peakOf(act.weekdays), streak: act.best, activeDays: act.active,
+    months: mList,
+    peakMonth,
   }
 }

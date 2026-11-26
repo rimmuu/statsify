@@ -1,8 +1,8 @@
 'use client'
 import { useState, type ReactNode } from 'react'
-import { motion } from 'framer-motion'
+import { motion } from 'motion/react'
 import { useI18n } from '@/lib/i18n'
-import { ease, time } from '@/lib/motion'
+import { easeOut, time } from '@/lib/motion'
 import { useSpotify } from '@/lib/spotify/provider'
 import { artistsOf, hasTop, tracksOf } from '@/lib/spotify/store'
 import type { Range } from '@/lib/spotify/types'
@@ -18,23 +18,24 @@ export default function SpotifyTop() {
   if (!top || !hasTop(top)) return null
   const tracks = tracksOf(top, range).slice(0, 5)
   const artists = artistsOf(top, range).slice(0, 5)
+
   return (
-    <FadeIn delay={0.18}>
-      <div className="card space-y-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
-            <h2 className="font-medium text-white">{t('sp.top.title')}</h2>
-            <p className="text-sm text-neutral-500">
+    <FadeIn delay={0.14}>
+      <section className="space-y-6 border-t border-white/[0.08] pt-10">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="min-w-0 space-y-1">
+            <h2 className="display-editorial text-3xl text-[#F5F5F5]">{t('sp.top.title')}</h2>
+            <p className="text-xs text-[#999999]">
               {t('sp.top.help')}
               {top.at ? ` · ${t('sp.top.updated', { when: dateTime(top.at) })}` : ''}
             </p>
           </div>
           <RangeTabs id="sp-top" value={range} onChange={setRange} />
         </div>
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-10 md:grid-cols-2">
           <Column title={t('sp.top.tracks')} k={range}>
             {tracks.map((x, i) => (
-              <Item
+              <RowItem
                 key={x.uri}
                 i={i}
                 art={<Art u={x.uri} name={x.name} />}
@@ -46,7 +47,7 @@ export default function SpotifyTop() {
           </Column>
           <Column title={t('sp.top.artists')} k={range}>
             {artists.map((x, i) => (
-              <Item
+              <RowItem
                 key={x.uri}
                 i={i}
                 art={<Art u={x.uri} image={x.image} name={x.name} />}
@@ -57,7 +58,7 @@ export default function SpotifyTop() {
             ))}
           </Column>
         </div>
-      </div>
+      </section>
     </FadeIn>
   )
 }
@@ -65,13 +66,13 @@ export default function SpotifyTop() {
 function Column({ title, k, children }: { title: string; k: string; children: ReactNode }) {
   return (
     <div className="min-w-0">
-      <h3 className="mb-2 text-sm text-neutral-400">{title}</h3>
+      <h3 className="mb-3 font-mono text-[11px] uppercase tracking-[0.14em] text-[#999999]">{title}</h3>
       <motion.ul
         key={k}
-        className="space-y-2.5"
+        className="divide-y divide-white/[0.06] border-t border-white/[0.06]"
         initial={{ opacity: 0, y: 6 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: time.tab, ease }}
+        transition={{ duration: time.tab, ease: easeOut }}
       >
         {children}
       </motion.ul>
@@ -79,14 +80,14 @@ function Column({ title, k, children }: { title: string; k: string; children: Re
   )
 }
 
-function Item({ i, art, title, sub, links }: { i: number; art: ReactNode; title: string; sub: string; links: ReactNode }) {
+function RowItem({ i, art, title, sub, links }: { i: number; art: ReactNode; title: string; sub: string; links: ReactNode }) {
   return (
-    <li className="flex items-center gap-3">
-      <span className="w-5 shrink-0 text-center text-sm tabular-nums text-neutral-500">{i + 1}</span>
+    <li className="flex items-center gap-3 py-2.5">
+      <span className="w-6 shrink-0 font-mono text-xs tabular-nums text-[#66666D]">{String(i + 1).padStart(2, '0')}</span>
       {art}
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium text-neutral-100">{title}</div>
-        {sub && <div className="truncate text-xs text-neutral-500">{sub}</div>}
+        <div className="truncate text-sm font-medium text-[#F5F5F5]">{title}</div>
+        {sub && <div className="truncate text-xs text-[#999999]">{sub}</div>}
       </div>
       {links}
     </li>

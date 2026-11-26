@@ -1,43 +1,161 @@
 'use client'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { LayoutGroup, motion } from 'motion/react'
+import {
+  Activity,
+  ArrowRight,
+  ChevronRight,
+  Clock,
+  Disc3,
+  Film,
+  GitCompareArrows,
+  Home,
+  LayoutGrid,
+  Mic2,
+  Music2,
+  Share2,
+  SlidersHorizontal,
+  Sparkles,
+  type LucideIcon,
+} from 'lucide-react'
 import { useI18n, type K } from '@/lib/i18n'
+import { spring } from '@/lib/motion'
 
-const paths = {
-  home: 'm3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z',
-  songs: 'M9 18V6l11-2v12M9 8l11-2M9 18a3 2.5 0 1 1-3-2.5H9m11 .5a3 2.5 0 1 1-3-2.5h3',
-  artists: 'M16 8a4 4 0 1 1-8 0 4 4 0 0 1 8 0zM4 21v-2a8 6 0 0 1 16 0v2z',
-  albums: 'M5 5h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM6 2h12M16 13a4 4 0 1 1-8 0 4 4 0 0 1 8 0z',
-  more: 'M4 12h.3m7.5 0h.3m7.5 0h.3',
-  insights: 'M4 20V9m5 11V4m6 16v-9m5 9V7',
-  history: 'M3 10a9 9 0 1 1 1 7M3 5v5h5m4-3v6l3 2',
-  genres: 'M3 7h18M3 17h18M8 4v6m8 4v6',
-  compare: 'M3 7h15l-4-4m7 14H6l4 4',
-  wrapped: 'M3 9h18v4H3zM5 13v8h14v-8M12 9v12m0-12S4 8 6 4s6 5 6 5 5-9 7-5-7 5-7 5z',
-  share: 'M12 15V3m-4 4 4-4 4 4M6 11H4v10h16V11h-2',
-  settings: 'M3 6h7m4 0h7M3 12h12m4 0h2M3 18h3m4 0h11M10 3v6m5 0v6m-9 0v6',
-  next: 'm9 5 7 7-7 7',
+export type NavItem = {
+  href: string
+  label: K
+  icon: LucideIcon
 }
-type Glyph = keyof typeof paths
-export function Icon({ name }: { name: Glyph }) {
-  return <svg className="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={name === 'more' ? 3.8 : 1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d={paths[name]} /></svg>
-}
-type Destination = readonly [string, K, Glyph]
-const primary: Destination[] = [['/', 'nav.home', 'home'], ['/tracks', 'nav.songs', 'songs'], ['/artists', 'nav.artists', 'artists'], ['/albums', 'nav.albums', 'albums'], ['/more', 'nav.more', 'more']]
-const secondary: Destination[] = [['/history', 'nav.history', 'history'], ['/insights', 'nav.insights', 'insights'], ['/genres', 'nav.genres', 'genres'], ['/compare', 'nav.compare', 'compare'], ['/wrapped', 'nav.wrapped', 'wrapped'], ['/share', 'nav.share', 'share'], ['/settings', 'nav.settings', 'settings']]
+
+export const PRIMARY_NAV: NavItem[] = [
+  { href: '/', label: 'nav.home', icon: Home },
+  { href: '/tracks', label: 'nav.songs', icon: Music2 },
+  { href: '/artists', label: 'nav.artists', icon: Mic2 },
+  { href: '/albums', label: 'nav.albums', icon: Disc3 },
+  { href: '/more', label: 'nav.more', icon: LayoutGrid },
+]
+
+export const SECONDARY_NAV: NavItem[] = [
+  { href: '/genres', label: 'nav.genres', icon: Sparkles },
+  { href: '/history', label: 'nav.history', icon: Clock },
+  { href: '/insights', label: 'nav.insights', icon: Activity },
+  { href: '/compare', label: 'nav.compare', icon: GitCompareArrows },
+  { href: '/wrapped', label: 'nav.wrapped', icon: Film },
+  { href: '/share', label: 'nav.share', icon: Share2 },
+  { href: '/settings', label: 'nav.settings', icon: SlidersHorizontal },
+]
+
+export const DESKTOP_LIBRARY_NAV: NavItem[] = [
+  { href: '/', label: 'nav.home', icon: Home },
+  { href: '/tracks', label: 'nav.songs', icon: Music2 },
+  { href: '/artists', label: 'nav.artists', icon: Mic2 },
+  { href: '/albums', label: 'nav.albums', icon: Disc3 },
+  { href: '/genres', label: 'nav.genres', icon: Sparkles },
+  { href: '/history', label: 'nav.history', icon: Clock },
+]
+
+export const DESKTOP_DISCOVER_NAV: NavItem[] = [
+  { href: '/insights', label: 'nav.insights', icon: Activity },
+  { href: '/compare', label: 'nav.compare', icon: GitCompareArrows },
+  { href: '/wrapped', label: 'nav.wrapped', icon: Film },
+  { href: '/share', label: 'nav.share', icon: Share2 },
+  { href: '/settings', label: 'nav.settings', icon: SlidersHorizontal },
+]
 
 export function Tabs() {
   const path = usePathname()
   const { t } = useI18n()
-  return <nav className="tab-bar" aria-label={t('nav.label')}>
-    {primary.map(([href, label, icon]) => {
-      const active = href === path || (href !== '/' && path.startsWith(href + '/')) || (href === '/more' && secondary.some(([dest]) => path === dest))
-      return <Link key={href} href={href} aria-current={active ? (path === href ? 'page' : 'location') : undefined}><Icon name={icon} /><span>{t(label)}</span></Link>
-    })}
-  </nav>
+
+  return (
+    <>
+      <div aria-hidden className="mobile-bottom-scrim md:hidden" />
+      <LayoutGroup id="mobile-tabs">
+        <nav className="mobile-tabbar md:hidden" aria-label={t('nav.label')}>
+          {PRIMARY_NAV.map(({ href, label, icon: Icon }) => {
+            const active =
+              href === path ||
+              (href !== '/' && path.startsWith(href + '/')) ||
+              (href === '/more' && SECONDARY_NAV.some((d) => path === d.href))
+            return (
+              <Link
+                key={href}
+                href={href}
+                aria-current={active ? (path === href ? 'page' : 'location') : undefined}
+                className={`pressable relative flex min-h-[50px] flex-col items-center justify-center gap-0.5 rounded-[20px] px-1 text-[10px] font-medium tracking-[0.01em] transition-colors ${
+                  active ? 'text-[#F5F5F5]' : 'text-[#999999]'
+                }`}
+              >
+                {active && (
+                  <motion.span
+                    layoutId="mobile-tab-indicator"
+                    transition={spring}
+                    className="absolute inset-0 rounded-[20px] bg-white/[0.1] shadow-[inset_0_1px_0_rgba(255,255,255,0.12)]"
+                  />
+                )}
+                <Icon
+                  className={`relative z-10 h-[19px] w-[19px] transition-colors ${
+                    active ? 'text-[#FA334F]' : 'text-current'
+                  }`}
+                  strokeWidth={active ? 2 : 1.7}
+                  aria-hidden
+                />
+                <span className="relative z-10 truncate">{t(label)}</span>
+              </Link>
+            )
+          })}
+        </nav>
+      </LayoutGroup>
+    </>
+  )
 }
 
 export function MoreLinks() {
   const { t } = useI18n()
-  return <ul className="more-list">{secondary.map(([href, label, icon]) => <li key={href}><Link href={href}><Icon name={icon} /><span>{t(label)}</span><Icon name="next" /></Link></li>)}</ul>
+  return (
+    <div className="space-y-8">
+      {/* Spotlight Wrapped Film entry */}
+      <Link
+        href="/wrapped"
+        className="pressable group relative block overflow-hidden rounded-2xl border border-white/[0.1] bg-[#111114] p-6"
+      >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0"
+          style={{
+            background:
+              'radial-gradient(80% 120% at 100% 0%, rgba(250, 51, 79, 0.24), transparent 65%)',
+          }}
+        />
+        <div className="relative flex items-center justify-between gap-4">
+          <div>
+            <p className="font-mono text-[11px] uppercase tracking-[0.18em] text-[#FA334F]">
+              {t('nav.wrapped')}
+            </p>
+            <h2 className="display-editorial mt-1.5 text-3xl text-[#F5F5F5]">{t('w.title')}</h2>
+            <p className="mt-1 text-sm text-[#999999]">{t('w.intro.sub')}</p>
+          </div>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-white/15 bg-white/[0.06] text-[#F5F5F5]">
+            <ArrowRight className="h-4 w-4" aria-hidden />
+          </span>
+        </div>
+      </Link>
+
+      {/* Clean hairline list for all secondary destinations */}
+      <ul className="divide-y divide-white/[0.08] border-y border-white/[0.08]">
+        {SECONDARY_NAV.filter((item) => item.href !== '/wrapped').map(({ href, label, icon: Icon }) => (
+          <li key={href}>
+            <Link
+              href={href}
+              className="pressable row-hover flex min-h-[62px] items-center gap-4 px-2 text-[#F5F5F5]"
+            >
+              <Icon className="h-5 w-5 shrink-0 text-[#999999]" strokeWidth={1.65} aria-hidden />
+              <span className="flex-1 text-[15px] font-medium tracking-[-0.01em]">{t(label)}</span>
+              <ChevronRight className="h-4 w-4 text-[#66666D]" aria-hidden />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
 }

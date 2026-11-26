@@ -1,45 +1,36 @@
 'use client'
-import { motion } from 'framer-motion'
-import { ease, itemV, tapCard, time } from '@/lib/motion'
+import { motion } from 'motion/react'
+import { itemV } from '@/lib/motion'
 import CountUp from './CountUp'
-import { Tilt } from './Motion'
 
-// Featured statistic card: outer motion wrapper participates directly in StaggerContainer variants
-// on both desktop and mobile; inner Tilt applies subtle desktop-only depth (max 2deg) without
-// blocking variant propagation or distorting numerals.
+// Editorial hairline statistic item (never a generic boxed dashboard card).
 export default function Stat({
   l,
   v,
   s,
   n,
   fmt,
-  featured = false,
+  accent = false,
 }: {
   l: string
   v?: string | number
   s?: string
   n?: number
   fmt?: (n: number) => string
+  accent?: boolean
   featured?: boolean
 }) {
-  const card = (
-    <motion.div
-      className={`card lift h-full ${featured ? 'border-white/[0.12]' : ''}`}
-      whileHover={{ y: -2 }}
-      whileTap={tapCard}
-      transition={{ duration: time.micro, ease }}
-    >
-      <div className="text-[11px] font-medium uppercase tracking-[0.12em] text-neutral-500">{l}</div>
-      <div className="metric-value mt-2 truncate text-xl font-semibold tracking-tight text-white tabular-nums sm:text-2xl">
+  return (
+    <motion.div variants={itemV} className="min-w-0 space-y-1.5 py-1">
+      <div className="font-mono text-[11px] uppercase tracking-[0.12em] text-[#999999]">{l}</div>
+      <div
+        className={`display-stat truncate text-2xl sm:text-3xl md:text-[34px] ${
+          accent ? 'text-[#FA334F]' : 'text-[#F5F5F5]'
+        }`}
+      >
         {n !== undefined && fmt ? <CountUp value={n} format={fmt} /> : v}
       </div>
-      {s && <div className="mt-1 truncate text-xs text-neutral-400">{s}</div>}
-    </motion.div>
-  )
-
-  return (
-    <motion.div variants={itemV} className="h-full min-w-0">
-      {featured ? <Tilt max={2.0} className="h-full">{card}</Tilt> : card}
+      {s && <div className="truncate text-xs text-[#66666D]">{s}</div>}
     </motion.div>
   )
 }

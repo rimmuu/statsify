@@ -1,66 +1,59 @@
-# Statsify: private Spotify listening stats
+# Statsify 3.0 — Personal Music Archive
 
-Your browser imports the Spotify file into IndexedDB and calculates statistics locally. Artwork and listening links send the relevant catalog identifiers or music credits to their providers. Importing a file requires no account or API keys. Optionally you can also connect your Spotify account (OAuth 2.0 with PKCE) to sync your latest plays and Spotify's own top lists; that part needs a free Spotify app and three environment variables, see [Connect Spotify](#connect-spotify-optional). Every dependency is free.
+Statsify is a private, cinematic music analytics application built with Next.js, React, TypeScript, Tailwind CSS, Motion, GSAP, and Three.js / React Three Fiber.
 
-## Get your data
-Spotify > Account > Privacy settings > Download your data > tick **Extended streaming history** (it can take days to arrive). Unzip it and keep the `Streaming_History_Audio_*.json` files. The basic `StreamingHistory*.json` from Account Data also imports (no album names).
+Your browser imports Spotify Extended Streaming History JSON exports directly into IndexedDB and computes all statistics locally—no account or API keys required. Optionally, you can connect your Spotify account via OAuth 2.0 with PKCE to sync recent plays and Spotify's own top lists & genre tags.
 
-## Run locally
-```
+## What's New in Statsify 3.0
+
+- **Nocturne Archive Visual Identity**: Refined dark-first palette (`#080808` obsidian canvas, `#18181B` secondary surface, `#F5F5F5` / `#999999` typography hierarchy, restrained `#FA334F` signature crimson accent) paired with self-hosted **Instrument Serif**, **Plus Jakarta Sans**, and **JetBrains Mono**.
+- **Dynamic Ambient Lighting**: Dominant colors extracted from album artwork and artist portraits smoothly shift ambient lighting via GPU-composited CSS `@property` channels.
+- **Cinematic Opening & 3D Vinyl Studio**: Lightweight, skippable opening experience (plays once for returning users, replayable from Settings, skipped automatically under `prefers-reduced-motion`) and an interactive **React Three Fiber 3D Vinyl** inside the Album Inspection Studio with automatic offscreen/hidden pause and CSS 3D fallback when WebGL is unavailable.
+- **Distinct Editorial Compositions Per Page**:
+  - **Home**: Editorial listening monograph with monumental total time, featured artwork + vinyl peek, hairlined stat ledger, asymmetric highlights, monthly rhythm, recent plays, and derived listening notes.
+  - **Songs**: Searchable, sortable, paginated music archive with play-share hairline meters, rank deltas, and shared-element 3D artwork flights into Track Detail dossiers.
+  - **Artists**: Magazine-inspired editorial portrait gallery (#1 cover spread, #2–#4 portrait trio, ranked index) backed by verified automatic portrait retrieval.
+  - **Albums**: Interactive **3D Cover Flow** (touch swipe/flick momentum, keyboard arrows, horizontal trackpad, range scrubber) + Editorial Record Shelf + **3D Vinyl Inspection Studio**.
+  - **Genres**: Typographic frequency study with editorial tonal spectrum bars (when Spotify is connected) and honest empty state otherwise.
+  - **History**: Day-grouped chronological listening journal with track artwork, search, timestamps, and bounded pagination for 10,000+ plays.
+  - **Insights**: 26-week daily listening calendar heatmap, 24-hour sonic rhythm, weekday cadence, streak metrics, and real data-derived listening observations.
+  - **Compare**: Compare any two **Artists**, **Tracks**, or **Time Periods** side by side with opposing proportional deltas and comparative Recharts trend lines.
+  - **Wrapped**: 7-scene interactive film powered by GSAP + Motion + 3D Vinyl with Pause/Play, Replay, touch swipe, keyboard navigation, and 1080×1920 Story export.
+  - **Share Studio**: 5 museum-grade `<canvas>` poster templates (**Obsidian Editorial**, **Cinematic Artwork**, **Minimal Monochrome**, **Dynamic Album Colors**, **Signature Red**) exporting pixel-identical **1080×1920** (Instagram Story) and **1080×1080** (Instagram Post) PNGs. The **Classic templates** selector also exports the five original Statsify layouts.
+- **Global Custom Date Ranges**: Filter any page by All Time, 1 Year, 6 Months, 1 Month, 1 Week, or Custom Date Range.
+- **Mobile-First Engineering**: Designed for iPhone 16 Pro Max Safari with translucent safe-area-aware bottom navigation (`Home`, `Songs`, `Artists`, `Albums`, `More`), capability-gated hover states, `16px` touch inputs, `100dvh` layouts, and swipeable bottom sheets.
+- **Bilingual Localization**: Full English and Bahasa Indonesia support persisted in `localStorage`.
+
+## Run Locally
+
+```bash
 npm install
 npm run dev     # http://localhost:3000
 ```
-Open **Settings** and select all the JSON files at once. Re-importing is safe: duplicates are skipped.
 
-## Deploy for free
-1. Push this folder to a GitHub repo (`.gitignore` already excludes Spotify exports).
-2. On vercel.com (Hobby plan): Add New > Project > import the repo. Framework is auto-detected. The JSON import needs no environment variables; the optional Spotify connection needs the three listed under [Connect Spotify](#connect-spotify-optional).
+Open **Settings** and select your Spotify `Streaming_History_Audio_*.json` files (or basic `StreamingHistory*.json`). Everything stays in your browser's IndexedDB (`spotify-stats` v1—100% compatible with existing Statsify user data).
 
-## How the numbers work
-- Listening time is the sum of `ms_played`, never plays x song length.
-- **Play event** = any imported row. **Stream** = 30 s or more played (Spotify's threshold). Both are shown.
-- Podcast/audiobook rows are skipped. Re-imports are skipped by timestamp + track + `ms_played` + occurrence number, so genuinely identical events within one export are all kept.
-- Time filters end at your newest imported play, because exports are snapshots.
-- Tracks and albums use artwork supplied with Spotify metadata or the track's public Spotify embed. Artist portraits use a verified Spotify artist ID or an Apple Music artist profile matched to a credited recording and its album when available. Statsify caches the result and shows an initial for ambiguous credits or missing images. Existing opt-outs for photo lookups are respected.
-- Apple Music album links verify the title, artist, release edition and collection ID in the selected storefront. Settings lets you use your Apple Music account region when it differs from the device region. Unmatched releases offer a regional search and a copyable title and artist.
-- Genres are not in the export. The Genres page shows genres only when Spotify is connected (Spotify's tags on your top artists, as a share of those artists, not weighted by listening time); otherwise it says so instead of guessing.
+## Verification Commands
 
-## Connect Spotify (optional)
-**Settings > Spotify account > Connect Spotify** signs you in with Spotify and then syncs two things:
-- your **last 50 plays** (`/me/player/recently-played`), merged into your history;
-- Spotify's own **top tracks and top artists** for 4 weeks, 6 months and about a year (`/me/top/{type}`). They appear on the Overview, feed the Genres page and give exact Spotify links for those artists.
+```bash
+npm test            # strict-compiles framework-free lib modules and runs all tests/*.test.cjs
+npm run typecheck   # tsc --noEmit across the entire Next.js app
+npm run lint        # next lint
+npm run build       # production Next.js build
+```
 
-What the Spotify API cannot do, so the app does not pretend to: it has no full listening history (only the last 50 plays, so sync regularly), it does not say how long a play lasted (synced plays count the track length and are stored with `src: "api"`), and the top lists carry ranks, not play counts. **The JSON export stays the complete and exact source**; the two work together.
+## Deploy to Vercel
 
-- **Duplicates.** An API play is skipped when it is already stored (same id) or when an imported play of the same track covers its timestamp (give or take 90 s). Importing an export later removes the API plays it now covers. A sync never overwrites or deletes anything that was imported.
-- **Everything else keeps working:** the import, your IndexedDB data, Wrapped, share cards, the Spotify and Apple Music listening links and the English / Bahasa Indonesia interface.
+1. Push your branch to GitHub (`.gitignore` excludes local `.env*` files and Spotify exports).
+2. Import the repository on Vercel (Next.js is auto-detected).
+3. JSON import, 3D Vinyl, Cover Flow, Wrapped, Insights, Share Studio, and Apple Music links work with **zero environment variables**.
+4. Optional Spotify OAuth requires the three environment variables listed in `.env.example` and detailed in **[docs/SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md)**:
+   - `SPOTIFY_CLIENT_ID`
+   - `SPOTIFY_REDIRECT_URI`
+   - `SESSION_SECRET` (32+ random characters)
 
-Setup is free and takes about five minutes: **[docs/SPOTIFY_SETUP.md](docs/SPOTIFY_SETUP.md)**. Since February 2026 Spotify apps run in *Development mode*: the app owner needs Spotify Premium and at most 5 accounts can be authorised.
+## Privacy & Security
 
-| Environment variable | Value |
-|---|---|
-| `SPOTIFY_CLIENT_ID` | Client ID of your Spotify app (not a secret) |
-| `SPOTIFY_REDIRECT_URI` | Exactly the Redirect URI registered in the dashboard, e.g. `https://your-app.vercel.app/api/spotify/callback` |
-| `SESSION_SECRET` | 32+ random characters; they encrypt the session cookie |
-
-Without them Spotify login stays off and the rest of the app works as before. `.env.example` lists them.
-
-**Security.** There is no client secret anywhere: the login uses Authorization Code with PKCE. Tokens never reach the browser's JavaScript; they live in an AES-256-GCM encrypted, `HttpOnly`, `SameSite=Lax` cookie (`Secure` and `__Host-` prefixed in production). `state` and the PKCE verifier are checked on the callback, the callback redirect never carries a code or token, the data route can only reach three whitelisted Spotify endpoints, and nothing is stored on the server. Scopes requested: `user-top-read`, `user-read-recently-played`, and `user-read-private` (required by Spotify for the connected-account profile endpoint). No email scope is requested. Disconnect forgets the session on this device; to revoke access completely, remove Statsify at spotify.com/account/apps.
-
-## Tests
-`npm test` compiles the framework-free modules under strict TypeScript and runs the checks against fake Spotify and iTunes servers (the RFC 7636 PKCE test vector, state validation, token refresh and rotation, error handling, duplicate detection, import regression). `npm run typecheck` is a plain `tsc --noEmit`. [docs/TESTING.md](docs/TESTING.md) says what is and is not covered.
-
-## Not built yet
-Genre enrichment (e.g. MusicBrainz tags cached in IndexedDB).
-
-## Share card
-The **Share** page draws a PNG card (Story 9:16 or Post 1:1; Subtle Red, Dark, Purple, Neon, Minimal) from your own history: total time, plays, top artist, top album and top 5 tracks, ranked by listening time. Periods: week, month, year, all time, or a custom date range; presets end at your newest imported play. Download works everywhere; Share uses the Web Share API when the browser can share files and otherwise saves the PNG. Artwork is drawn only if the image host allows it; otherwise letter tiles are used.
-
-## Language and motion
-**Settings > Language** switches the whole interface between English and Bahasa Indonesia. The choice is saved in this browser (localStorage); numbers, dates and durations follow the language. Artist, track and album names and your imported data are never translated. All text lives in one table in `lib/i18n.tsx`, English and Indonesian side by side. The interface follows the system’s reduced-motion preference.
-
-## Wrapped story
-`/wrapped` is a full-screen, seven-slide story built from your own plays: intro (pick all time or a year), listening stats, top artist, top tracks, top albums, music taste, and a recap. Navigate with the on-screen buttons, the progress bar, taps, swipes, or the ← → keys; Esc leaves. Rankings use listening time. Genres are not in Spotify's export, so "taste" shows when you listen (hour of day, favourite weekday, longest streak, top-artist share) instead of invented genres. **Share My Story** uses the Web Share API with a PNG made on your device; where that is unavailable you get Download image and Copy link. The link only opens Statsify and contains none of your data.
-
-## Motion system (Framer Motion)
-Albums open in an inspection sheet with listening totals, track rankings, and provider links. The optional 3D Flow view lets you browse covers by touch, keyboard, or slider. Nearby covers load on demand. Desktop navigation uses spatial transitions. Touch devices use a short single-page transition, and reduced-motion mode skips the 3D navigation and looping Wrapped effects. Library and history lists use native scrolling and show up to 100 results per page. All plays contribute to statistics and rankings.
+- All listening history remains local inside browser IndexedDB.
+- Optional Spotify OAuth uses Authorization Code with PKCE (no client secret); tokens stay server-side inside an AES-256-GCM encrypted `HttpOnly` cookie (`__Host-` + `Secure` in production) and never reach client JavaScript.
+- External catalog/artwork lookups (`/api/apple`, `/api/artist-photo`) enforce same-origin `Sec-Fetch-Site` checks, strict input validation, and verified Apple Music storefront/catalog ID matching.
